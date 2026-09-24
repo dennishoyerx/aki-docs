@@ -1,0 +1,51 @@
+---
+title: Architecture
+description: The capability execution chain, ownership boundaries, and request lifecycle.
+---
+
+Aki is organized around one capability execution chain and two explicit branches around it:
+
+```text
+request or channel
+       ↓
+Agent: chooses the appropriate action
+       ↓
+Rev: identity, versions, resolution, invocation
+       ↓
+executor: native, plugin/process, graph, HTTP, LLM, MCP, ...
+       ↘
+kind=ui Rev function → Ren: presentation
+
+Store: context-bound data plane for runtime capabilities and executors
+```
+
+## Ownership at a glance
+
+| Concern | Owner |
+| --- | --- |
+| Choosing an action for a turn | Agent |
+| Naming, versioning, resolving, and invoking capabilities | Rev |
+| Presenting a `kind=ui` Rev function | Ren |
+| Reading and writing context-bound data | Store |
+| Implementing an executor | Kernel-native code or a plugin/process |
+
+Ren is not a second authoritative capability registry. Store is not a capability registry. Plugins and processes are executor details; changing one does not change the ownership model.
+
+## Request lifecycle
+
+A normal turn follows these steps:
+
+1. The gateway or a channel passes the request into the Agent runtime.
+2. The Agent interprets the conversation and available tool descriptions.
+3. Rev resolves the selected capability and its active version.
+4. Rev checks inherited requirements and invokes the executor.
+5. The result returns to the Agent for the next step or the final response.
+6. If the capability is a `kind=ui` function, Ren derives the presentation state from the same Rev identity and revisions.
+
+Store access remains context-bound throughout the chain. An executor does not turn a Store key or namespace into a capability identity.
+
+## Why the boundaries matter
+
+Keeping “what”, “how”, and “where data lives” separate makes replacement and inspection predictable. A native handler, a plugin, or an HTTP call can implement the same Rev capability without creating competing names. A UI renderer can change without changing the capability that is invoked. A data namespace can be policy-controlled without becoming a new architectural layer.
+
+Continue with [Agent and Rev](/docs/architecture/agent-rev) and [Runtime boundaries](/docs/architecture/boundaries).

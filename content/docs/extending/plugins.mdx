@@ -1,0 +1,29 @@
+---
+title: Plugins
+description: Plugins implement capabilities; they do not become a new architectural layer.
+---
+
+Plugins are **executor implementation details** for AKR. A plugin can host a native-adjacent tool or another capability implementation, but it does not own the Agent, Rev, Ren, or Store model.
+
+## What a plugin may do
+
+A plugin can:
+
+- receive a resolved capability call;
+- perform implementation-specific work;
+- return a structured result or a descriptive error;
+- use inherited call and Store context according to policy.
+
+It does not create a second capability identity. Rev still owns the name, versions, active selection, and invocation path. A process boundary changes implementation, not architecture.
+
+## Lifecycle and health
+
+The plugin manager loads configured processes, observes their health, and applies failure handling before capabilities are exposed through the normal Rev and tool surfaces. Repeated failures lead to quarantine with backoff rather than an unbounded immediate restart loop.
+
+Use these discovery surfaces for current state:
+
+- `/health` for runtime and plugin health summaries;
+- `/tools` for the currently exposed tool schemas;
+- `/rev/functions` for Rev identity, kind, executor metadata, and revision state.
+
+A plugin can implement a Rev capability, and a compatible Rev capability can be created or revised at runtime where policy permits. Neither fact guarantees that a deployment accepts arbitrary code, exposes a management endpoint, or can modify its own infrastructure.

@@ -1,0 +1,47 @@
+---
+title: Getting started
+description: Read the runtime in the right order and run the documentation site locally.
+---
+
+## Read the model first
+
+A reliable first pass follows the ownership boundaries:
+
+1. Read [Architecture](/docs/architecture) for the execution chain.
+2. Read [Agent and Rev](/docs/architecture/agent-rev) for the decision and capability layers.
+3. Use [Runtime](/docs/runtime) for chat, events, and invocation surfaces.
+4. Read [Extending](/docs/extending) before adding a plugin or UI capability.
+5. Keep [Reference](/docs/reference) open while checking routes and safeguards.
+
+## Run this documentation site
+
+The site uses the React Router framework mode of Fumadocs, Vite, Bun, and TypeScript.
+
+```bash
+bun install
+bun run dev
+```
+
+Open the local URL printed by the development server. The header search queries the local index built from the pages in `content/docs`; it does not call a hosted search service.
+
+Useful production-style checks are:
+
+```bash
+bun run typecheck
+bun run build
+bun run start
+```
+
+## Use the machine-readable surfaces
+
+The built site exposes a page index, the complete corpus, and processed Markdown for every page:
+
+- `/llms.txt` — page index and descriptions.
+- `/llms-full.txt` — the complete seeded corpus.
+- `/docs/<page>.md` — processed Markdown for one page.
+
+The `/mcp` Streamable HTTP endpoint exposes `list_pages`, `get_page`, and `search`. Its tools use the same local source and search index as the site.
+
+## Keep the scope clear
+
+This site documents the public capability model. It does not add authentication, hosted search, an AI chat product, or a second capability registry. Deployment permissions and private service configuration remain operator concerns.

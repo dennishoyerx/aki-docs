@@ -1,0 +1,37 @@
+---
+title: Chat and sessions
+description: The OpenAI-compatible, session-oriented, and WebSocket chat surfaces.
+---
+
+AKR exposes three related chat styles over the same Agent and Rev execution model.
+
+## OpenAI-compatible completion
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /v1/models` | List model IDs currently exposed by the gateway. |
+| `POST /v1/chat/completions` | Complete a chat with optional SSE streaming. |
+
+A request carries `model`, `messages`, and `stream`. Non-streaming responses use the OpenAI chat-completion shape. Streaming responses use Server-Sent Events and end with `[DONE]`.
+
+## Session-oriented chat
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /chat/sessions` | List sessions, optionally filtered by user or source. |
+| `POST /chat/sessions` | Create a session or send into an existing session. |
+| `GET /chat/sessions/{id}` | Read one session. |
+| `GET /chat/sessions/{id}/messages` | Read history with optional pagination and channel filters. |
+| `POST /chat/sessions/{id}/messages` | Create a message. |
+| `GET /chat/stream/{sessionId}` | Stream chat events as SSE. |
+| `POST /chat/dispatch` | Queue an asynchronous Agent turn. |
+| `POST /chat/cancel/{sessionId}` | Request cancellation. |
+| `GET /ws/chat` | WebSocket chat transport. |
+
+`POST /chat/dispatch` returns `202` with `{"ok":true,"status":"accepted"}` after publishing the turn. It is not a handle/result workflow. Use native `agent.dispatch` and pass its returned `session_id` to `agent.result` when a retrievable background result is required.
+
+## Browser proxying
+
+A browser may call `/api/...`; the proxy strips `/api` before forwarding to AKR. Thus `/api/v1/chat/completions` maps to `/v1/chat/completions`, and `/api/chat/...` maps to `/chat/...`. The `/api` prefix is not a kernel route.
+
+Chat requests ask the [Agent](/docs/architecture/agent-rev) to decide and act. Rev owns any selected capability, while session and Store access remain context-bound.

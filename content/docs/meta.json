@@ -1,0 +1,12 @@
+{
+  "title": "Aki docs",
+  "description": "A practical map of the Aki capability runtime.",
+  "pages": [
+    "introduction",
+    "architecture",
+    "runtime",
+    "extending",
+    "reference",
+    "development"
+  ]
+}

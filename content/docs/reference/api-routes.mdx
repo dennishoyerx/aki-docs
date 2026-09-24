@@ -1,0 +1,36 @@
+---
+title: API routes
+description: Stable public route anchors for discovery, events, MCP, UI, Rev, and chat.
+---
+
+These are kernel routes registered by the gateway. A browser may add the `/api` proxy prefix, but the proxy strips it before forwarding.
+
+| Area | Routes |
+| --- | --- |
+| Health and discovery | `GET /health`, `GET /tools`, `GET /v1/models` |
+| Events | `GET /events/poll`, `GET /events/stream` |
+| MCP | `/mcp` |
+| UI metadata | `GET /ui/components`, `GET /ui/nav`, `GET /ui/apps/{id}` |
+| Rev | `GET /rev/functions`, detail, invoke, revision, rollback, traffic, and metrics subroutes |
+| OpenAI-compatible chat | `POST /v1/chat/completions` |
+| Session chat | `/chat/*` |
+| WebSocket chat | `GET /ws/chat` |
+
+## Rev routes
+
+The main Rev operations are:
+
+- `GET /rev/functions` — list capability identity and state;
+- `GET /rev/functions/{name}` — inspect one capability;
+- `POST /rev/functions/{name}/invoke` — invoke the selected capability;
+- revision, rollback, traffic, and metrics subroutes — operate on the same Rev identity.
+
+## Browser proxy examples
+
+| Browser path | Kernel path |
+| --- | --- |
+| `/api/rev/functions` | `/rev/functions` |
+| `/api/v1/chat/completions` | `/v1/chat/completions` |
+| `/api/chat/sessions` | `/chat/sessions` |
+
+`/api` itself is not a kernel route. The gateway route composition and browser proxy boundary are described in [Architecture](/docs/architecture/boundaries).

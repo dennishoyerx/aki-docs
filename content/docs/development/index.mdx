@@ -1,0 +1,39 @@
+---
+title: Development
+description: Build and verify the Aki documentation site with the current local toolchain.
+---
+
+The site is intentionally small. Content lives under `content/docs`, routes live under `app/routes`, and shared source/search helpers live under `app/lib`.
+
+## Local commands
+
+```bash
+bun install
+bun run dev
+bun run typecheck
+bun run lint
+bun run build
+bun run smoke
+```
+
+`bun run typecheck` generates React Router route types before running TypeScript. The production build uses the React Router framework adapter and Vite.
+
+## Runtime checks
+
+After `bun run build`, start the production server with:
+
+```bash
+PORT=3000 bun run start
+```
+
+The server exposes the documentation UI plus:
+
+- `/health` for a small successful health response;
+- `/api/search?query=Rev` for the local full-text index;
+- `/llms.txt` and `/llms-full.txt` for machine-readable corpus views;
+- `/docs/<page>.md` for processed page Markdown;
+- `/mcp` for the Streamable HTTP MCP endpoint.
+
+## Keep changes focused
+
+Do not add authentication, analytics, hosted search, AI chat, versions, a CMS, or another framework. Prefer the existing Fumadocs and React Router primitives over a parallel abstraction. The Docker image runs the built server on Node; Bun remains the development and build tool.

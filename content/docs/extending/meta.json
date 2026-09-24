@@ -1,0 +1,6 @@
+{
+  "title": "Extending",
+  "description": "Add capabilities without creating a second architecture.",
+  "defaultOpen": true,
+  "pages": ["index", "plugins", "ren"]
+}

@@ -1,0 +1,17 @@
+---
+title: Events
+description: Pollable buffered events and live Server-Sent Events.
+---
+
+The gateway exposes two event views:
+
+- `GET /events/poll?since=<timestamp>` reads the buffered event view.
+- `GET /events/stream?prefix=<prefix>` streams matching events as Server-Sent Events.
+
+Consumers can use polling for simple coordination or the stream for lower-latency updates. The event surface is operational: it reports activity around sessions, runtime work, and UI state without becoming a capability registry.
+
+## Storm protection
+
+The event gateway applies a per-subject sliding-window circuit breaker, cooldown, suppression counter, and explicit reset. A busy UI render stream is exempt from self-suppression. If a breaker remains open after the underlying cause is addressed, an operator can reset it through the administrative storm-reset route.
+
+The protection is intentionally narrow: it reduces event storms and repeated noisy work. It is not a substitute for network controls, credential handling, or deployment isolation. See [Guardrails](/docs/reference/guardrails) for the other chokepoints.

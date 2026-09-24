@@ -1,0 +1,29 @@
+---
+title: Runtime
+description: Capability invocation, chat sessions, and event delivery in the Aki runtime.
+---
+
+The runtime is the active side of the architecture. It receives requests, gives the Agent enough context to decide, resolves the selected capability through Rev, and returns a result through the same execution chain.
+
+## Invocation path
+
+A capability invocation is a sequence of contracts:
+
+1. The caller supplies a capability name, arguments, and inherited context.
+2. Rev identifies the capability and selected version.
+3. Rev checks declared Store requirements and preconditions.
+4. The executor performs the implementation-specific work.
+5. The result returns through the same boundary to the Agent or client.
+
+The executor can be native code, a plugin or process, a graph, an HTTP endpoint, an LLM call, or an MCP integration. The public capability identity remains the Rev identity.
+
+## Runtime surfaces
+
+- [Chat and sessions](/docs/runtime/chat) covers completion, session, cancellation, and streaming routes.
+- [Events](/docs/runtime/events) covers polling and Server-Sent Events.
+- [Rev](/docs/runtime/rev) covers capability identity, versions, and invocation.
+- [Store](/docs/runtime/store) covers context-bound data and namespace policy.
+- [API routes](/docs/reference/api-routes) is the route-oriented index.
+- [Guardrails](/docs/reference/guardrails) explains the safeguards around turns and mutations.
+
+A route is an entry point, not a new ownership layer. The Agent still decides; Rev still resolves; Store still enforces its own context and policy boundary.

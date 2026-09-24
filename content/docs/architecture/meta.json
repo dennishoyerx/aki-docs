@@ -1,0 +1,6 @@
+{
+  "title": "Architecture",
+  "description": "The capability chain and its ownership boundaries.",
+  "defaultOpen": true,
+  "pages": ["index", "agent-rev", "boundaries"]
+}

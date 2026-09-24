@@ -1,0 +1,32 @@
+---
+title: Rev
+description: Capability identity, version selection, executor resolution, and invocation.
+---
+
+Rev is the capability execution layer. It gives a capability one stable identity while allowing the implementation behind that identity to evolve.
+
+## Identity and selection
+
+A Rev function is identified by its capability name, schema, and kind. Rev records revisions and the active selection for that identity. Inspection, traffic, rollback, and invocation all operate on the same name; they do not create parallel registries.
+
+```text
+name + schema + kind
+        ↓
+revision history and active selection
+        ↓
+executor resolution
+        ↓
+invocation and result
+```
+
+## Resolution
+
+Rev checks the inherited context, declared Store requirements, and preconditions before selecting an executor. The executor answers **how** the capability runs; the Rev function answers **what** it is. Native handlers, plugins, processes, graphs, HTTP calls, LLMs, and MCP integrations can therefore remain implementation choices.
+
+A `kind=ui` function is also the canonical source for [Ren](/docs/extending/ren) presentation state. Ren does not take over identity or version ownership.
+
+## Public inspection
+
+`GET /rev/functions` lists current identity and revision state. `GET /rev/functions/{name}` inspects one capability, and `POST /rev/functions/{name}/invoke` invokes it. Browser `/api/...` paths are proxy prefixes, not additional kernel routes.
+
+Read [Agent and Rev](/docs/architecture/agent-rev) for the decision boundary and [Guardrails](/docs/reference/guardrails) for the checks around invocation.

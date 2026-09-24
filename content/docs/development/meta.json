@@ -1,0 +1,6 @@
+{
+  "title": "Development",
+  "description": "Run, verify, and maintain the documentation site.",
+  "defaultOpen": true,
+  "pages": ["index", "content-workflow"]
+}

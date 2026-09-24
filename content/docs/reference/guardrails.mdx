@@ -1,0 +1,32 @@
+---
+title: Guardrails
+description: The main safeguards enforced around gateway access, turns, Rev, plugins, events, and Store.
+---
+
+AKR's safeguards are enforced at a small number of chokepoints. These controls reduce specific failure modes; they are not a claim of complete security.
+
+## Gateway access
+
+When `AKR_API_KEY` is configured, gateway routes require the API key. `/health`, `/tools`, and `/v1/models` are explicitly exempt. Credentials and private gateway addresses never belong in public documentation.
+
+## Calls and turns
+
+The dispatcher propagates the call chain and rejects a repeated tool or excessive chain depth before recursive dispatch continues. The Agent runtime detects repeated tool signatures and no-progress results, then applies wall-clock, round, and tool-call budgets.
+
+These controls limit a turn. They are not a capability allow-list and are separate from Store namespace policy.
+
+## Rev requirements
+
+Capability Store requirements and preconditions are checked at the invocation chokepoint before an executor is selected. Unknown precondition domains or rules fail closed. This prevents an implementation branch from bypassing declaration checks.
+
+## Store writes
+
+Store centralizes mutation authorization before backend access. State-key writes also pass the write-loop guard before mutation and event emission. A denied write cannot create a key, blob, index document, or event.
+
+Read policy is separate: after a namespace is configured, an empty read list is intentionally open for compatibility, while an empty write list denies non-kernel callers. Unknown namespaces fail closed for both operations.
+
+## Plugins and events
+
+Repeated plugin failures move a process into backoff quarantine rather than an immediate unbounded restart loop. Per-subject event circuit breakers, cooldowns, suppression counters, and explicit resets reduce event storms.
+
+Network exposure, credential handling, operator permissions, and deployment isolation remain separate responsibilities. Read [Store policy](/docs/architecture/boundaries) alongside this page when changing an access path.

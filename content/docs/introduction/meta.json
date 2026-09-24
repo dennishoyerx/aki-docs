@@ -1,0 +1,6 @@
+{
+  "title": "Introduction",
+  "description": "Start with the runtime model and the documentation map.",
+  "defaultOpen": true,
+  "pages": ["index", "getting-started"]
+}

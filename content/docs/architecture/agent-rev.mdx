@@ -1,0 +1,43 @@
+---
+title: Agent and Rev
+description: The decision layer and the capability execution layer have deliberately different responsibilities.
+---
+
+## Agent decides
+
+The **Agent** interprets the request, selects an action from the capabilities available to the turn, provides arguments, and consumes the result. It may create or revise a compatible capability when the runtime and operator policy allow it.
+
+The Agent does not own capability identity, version history, resolution, or execution. It does not maintain a second registry, make Store namespaces authoritative, or turn a plugin process into an architectural layer.
+
+## Rev resolves and invokes
+
+**Rev is the capability execution layer.** A capability is identified by a name plus a schema and kind. Rev records its revisions and active selection, resolves the selected version, and invokes the executor.
+
+```text
+name + schema + kind
+        ↓
+revision history and active selection
+        ↓
+executor resolution
+        ↓
+invocation and result
+```
+
+The executor answers **how** a capability runs. The Rev function answers **what** it is. A new executor must preserve the same identity, version selection, requirement checks, context propagation, and result boundary.
+
+## A turn together
+
+```text
+request
+  → Agent builds the turn
+  → Agent chooses an available action
+  → Rev resolves the capability and active version
+  → Rev invokes the executor with trusted context
+  → result returns to the Agent
+```
+
+The native agent surface includes operations for dispatching, retrieving, listing, and inspecting agents. The exact live tool surface is exposed by `GET /tools`; documentation should not freeze a volatile count.
+
+Self-extension through Rev is a runtime capability subject to executor, mutation, network, filesystem, and deployment policy. It is not an assurance that an installation permits unrestricted self-modification.
+
+See [Capabilities and tools](/docs/reference/capabilities) and [Guardrails](/docs/reference/guardrails).

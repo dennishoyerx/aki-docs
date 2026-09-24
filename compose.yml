@@ -1,0 +1,17 @@
+services:
+  aki-docs:
+    build:
+      context: .
+    container_name: aki-docs
+    restart: unless-stopped
+    networks:
+      - public
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.aki-docs.rule=Host(`docs.hzbx.de`)
+      - traefik.http.routers.aki-docs.entrypoints=web
+      - traefik.http.services.aki-docs.loadbalancer.server.port=3000
+
+networks:
+  public:
+    external: true

@@ -1,0 +1,45 @@
+---
+title: Capabilities and tools
+description: The stable capability concept, native tool families, discovery, and invocation.
+---
+
+A **capability** is the stable thing the runtime can do. [Rev](/docs/architecture/agent-rev) owns its identity, versions, resolution, and execution. A **tool** is the callable, schema-bearing surface exposed to an Agent turn or another client; it may be native or plugin-backed.
+
+```text
+Agent chooses
+    ↓
+Rev identity and selected version
+    ↓
+native handler, plugin/process, graph, HTTP, LLM, MCP, or another executor
+```
+
+## Native families
+
+Current native definitions include these families:
+
+- `plugin.*`
+- `workspace.*`
+- `session.*`
+- `store.*`
+- `llm.*`
+- `agent.*`
+- `cmd.*`
+- `toolset.*`
+- `tool.*` and `rev.*`
+- `service.*`
+- `errors.*`
+- `ui.*`
+- `ren.*`
+
+The Rev lifecycle aliases include `rev.create`, `rev.edit`, `rev.rollback`, and `rev.archive`; `rev.get` and `rev.invoke` are separate operations, and `rev.list` is the list view.
+
+This is a family index, not an exact inventory. `GET /tools` and the source definitions are authoritative for current names and schemas. A plugin name is an implementation detail, not a second capability namespace.
+
+## Discovery and invocation
+
+- `GET /tools` exposes the current tool surface and schemas.
+- `GET /rev/functions` exposes Rev identity, kind, executor metadata, and revision state.
+- `POST /rev/functions/{name}/invoke` invokes a Rev capability.
+- Native operations are implemented in the kernel; plugin-backed operations delegate to an executor.
+
+All Rev-backed calls preserve the Agent decision boundary and the Store context and policy boundary. The retired `toolbox.*`, `maps.*`, `flows.*`, `runs.*`, and `nats.*` prefixes are not part of the current native surface.

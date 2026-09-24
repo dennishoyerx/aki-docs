@@ -1,0 +1,25 @@
+---
+title: Extending Aki
+description: Add capabilities and presentation behavior while preserving the Rev identity model.
+---
+
+Extension is a runtime concern with a strict shape:
+
+1. Describe the capability by name, schema, and kind.
+2. Keep its identity and revisions in Rev.
+3. Select the version that the invocation should use.
+4. Implement the work behind an executor.
+5. Preserve inherited context, requirement checks, and the result boundary.
+
+The implementation may be native, a plugin or process, a graph, an HTTP call, an LLM, or an MCP integration. The choice changes the executor, not the capability model.
+
+## Two extension paths
+
+- [Plugins](/docs/extending/plugins) explains process-backed executor implementations and health handling.
+- [Ren](/docs/extending/ren) explains how a Rev function with `kind=ui` becomes presentation state.
+
+## Policy still applies
+
+A runtime may be able to represent and execute compatible capabilities without a deployment allowing arbitrary mutation, unrestricted code execution, public network access, or self-managed infrastructure. Treat those permissions as explicit operator policy.
+
+Start with [Agent and Rev](/docs/architecture/agent-rev), then read [Guardrails](/docs/reference/guardrails) before changing an invocation path.

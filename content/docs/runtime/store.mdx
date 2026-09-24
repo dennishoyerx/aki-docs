@@ -1,0 +1,32 @@
+---
+title: Store
+description: Context-bound data access, namespace policy, and write protection.
+---
+
+The Store is a context-bound data plane. It stores and retrieves runtime data; it is not a fourth architectural pillar, a capability registry, or the owner of Rev and Ren identity.
+
+## Context-bound access
+
+`StoreContext` carries authenticated origin plus capability, run, conversation, and workspace identity. Context propagates through the call chain instead of being accepted as an untrusted capability argument. `Store::for_context` provides scoped access; there is no context-free Store entry point.
+
+A namespace policy chooses the scope, and a non-global scope must be addressable from the inherited context.
+
+## Read and write policy
+
+| Policy case | Read semantics | Write semantics |
+| --- | --- | --- |
+| No namespace configured | Fail closed | Fail closed |
+| Access list is empty | Read-open for non-kernel callers | Deny for non-kernel callers |
+| Access list is non-empty | Match capability/plugin identity, with `*` and `prefix.*` support | Match capability/plugin identity, with the same wildcard forms |
+| Authenticated UI origin | May read the declared namespace | May write when the write list is non-empty |
+| Kernel origin | Allowed | Allowed |
+
+An empty read list is an intentional compatibility policy after namespace lookup succeeds. An empty write list remains fail-closed for plugin and capability callers. Unknown namespaces fail closed for both operations.
+
+## Write protection
+
+Store centralizes mutation authorization before backend access. State-key mutations pass the write-loop guard before a key, blob, index document, or event can be created. Rev checks a capability's declared Store requirements before executor selection, while Store independently enforces its own namespace and context policy.
+
+The current native `store.*` family exposes data, search, stream, and blob operations. Exact names and schemas are available from `GET /tools`.
+
+See [Guardrails](/docs/reference/guardrails) for the surrounding runtime checks.

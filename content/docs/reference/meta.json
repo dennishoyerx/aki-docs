@@ -1,0 +1,6 @@
+{
+  "title": "Reference",
+  "description": "Routes, capability families, and safeguards.",
+  "defaultOpen": true,
+  "pages": ["index", "api-routes", "capabilities", "guardrails"]
+}

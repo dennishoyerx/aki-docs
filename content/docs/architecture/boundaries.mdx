@@ -1,0 +1,26 @@
+---
+title: Runtime boundaries
+description: Browser proxy paths, kernel routes, and self-extension constraints.
+---
+
+## Browser and kernel paths
+
+A browser may call `/api/rev/functions` or `/api/v1/chat/completions`. The browser-facing proxy strips `/api` before forwarding to the kernel. Therefore:
+
+- `/api/...` is a browser proxy prefix, not a kernel route.
+- `/rev/functions` is the kernel route.
+- `/v1/chat/completions` is the kernel OpenAI-compatible route.
+
+The same distinction applies to chat, events, MCP, and UI metadata. A browser integration should follow the proxy convention; a kernel client should use the kernel path.
+
+## Extension boundary
+
+Self-extension means that compatible capabilities can be represented, versioned, selected, and executed through Rev where policy permits. It does not guarantee that an operator has enabled mutation, granted a process unrestricted filesystem or network access, or made a private service publicly reachable.
+
+Those are deployment and authorization decisions. A compatible capability can be represented without promising that every deployment will accept it.
+
+## Replacement without duplication
+
+Changing from a native implementation to a plugin or process is an implementation change, not a new architectural pillar. The replacement must still enter through Rev and preserve its context and result boundaries. Ren remains a presentation branch, and Store remains a context-bound data plane.
+
+Use this boundary when designing a plugin, an HTTP-backed capability, or a browser integration. It keeps operational details from obscuring the public capability model.

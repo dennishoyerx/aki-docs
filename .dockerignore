@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+build
+.react-router
+.source
+.server.log
+*.log
+.env
+.env.*
+README.md
+AGENTS.md

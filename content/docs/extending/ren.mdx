@@ -1,0 +1,24 @@
+---
+title: Ren
+description: The presentation branch for Rev functions with kind=ui.
+---
+
+**Ren is the presentation branch of Rev.** Its canonical input is a Rev function with `kind=ui`; Ren has no separate authoritative capability or version registry.
+
+```text
+Rev function (kind=ui)
+        ↓
+Rev function list and details
+        ↓
+browser filters kind=ui and derives Ren state
+        ↓
+rendered presentation
+```
+
+The browser bridge derives Ren state from Rev identity and revisions. Rev remains authoritative for capability identity, versions, and active selection.
+
+Ren defines how a Rev-owned UI capability is presented. It does not decide which general capability the [Agent](/docs/architecture/agent-rev) should invoke, and it does not turn [Store](/docs/reference/capabilities) namespaces into UI identities.
+
+Native `ren.*` tools can inspect and manage UI elements, but their presence does not create a second source of truth. Changes follow the Rev lifecycle: identity, version, active selection, rollback, and invocation remain Rev concerns.
+
+Browser calls may use `/api/rev/functions`; the browser proxy strips `/api` before forwarding. The kernel anchor is `/rev/functions`, not `/api/rev/functions`.
