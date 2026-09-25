@@ -1,0 +1,46 @@
+---
+title: Run Aki
+description: Start the Aki product locally from its public Compose surface and verify the Gateway safely.
+---
+
+This page is about the **Aki product**, not this documentation site. The product Compose file defines separate `akr` (Kernel/Gateway) and `aki` (web app) services, and the web app depends on the Gateway. The docs repository's `bun run ...` commands build or verify documentation only; they do not start AKR.
+
+## Before starting
+
+Run these commands from an Aki product checkout with its normal Compose prerequisites prepared by the operator. The public Compose file expects an environment file and operator-provided networks/volumes; this page does not reproduce their values or deployment details.
+
+## Start the product
+
+```sh
+docker compose up --build
+```
+
+This starts the product services described by the public `compose.yml`. It is separate from the docs-only `bun run smoke` check, which validates content, HTML, Markdown, search, and documentation MCP surfaces without starting a runtime.
+
+## Verify the local Gateway
+
+The Gateway health and tool discovery routes are the safest first checks. These are local-only probes for a product checkout:
+
+```sh
+curl -i http://localhost:18768/health
+curl -i http://localhost:18768/tools
+```
+
+`/health` reports the AKR service snapshot, including plugin, Store, MCP, and event-storm summaries. `/tools` reports the currently exposed tool sets and schemas. Both routes are public at the Gateway boundary; other routes may require the operator-configured API key. See [API first contact](/docs/reference/api-first-contact) and [Security and policy](/docs/reference/security).
+
+Open the web app through the local address published by the `aki` service. The documentation site's own `/health` and `/mcp` routes belong to `aki-docs` and are not product health checks.
+
+## Stop the product
+
+```sh
+docker compose down
+```
+
+Stopping the product does not change the docs-only commands. For a complete public documentation check, return to [Getting started](/docs/introduction/getting-started).
+
+## Next
+
+- [API first contact](/docs/reference/api-first-contact)
+- [Chat and sessions](/docs/runtime/chat)
+- [End-to-end example](/docs/runtime/end-to-end)
+- [FAQ](/docs/reference/faq)

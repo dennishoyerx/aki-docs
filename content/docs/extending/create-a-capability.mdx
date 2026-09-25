@@ -8,7 +8,7 @@ This is a runtime-specific walkthrough. The live schema is authoritative: start 
 ## 1. Discover the tools
 
 ```sh
-export AKR_BASE_URL="https://aki-gateway.example.invalid"
+export AKR_BASE_URL="https://api.example.invalid"
 curl -i "$AKR_BASE_URL/tools"
 ```
 
@@ -57,8 +57,118 @@ Browser clients may use the proxy spelling `/api/rev/functions/hello.greet/invok
 
 Use `rev.edit` or the Rev revision route to create a new revision, inspect it, and select it deliberately. Read [Rev](/docs/runtime/rev) for identity and selection, and [Guardrails](/docs/reference/guardrails) for the checks around invocation.
 
+## Error cases
+
+The following probes are runtime-specific. They use a placeholder address and never include a real key; protected routes may return `401` before the application handler runs.
+
+### Unknown capability
+
+**Symptom:** Invocation or inspection returns `ok: false` with an unknown-capability error.
+
+**Likely cause:** Rev cannot resolve the requested name in the current capability registry or its Ren fallback.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/rev/functions/UNKNOWN_CAPABILITY"
+```
+
+**Safe fix:** Compare the exact name with `GET /rev/functions` and `GET /tools`; do not create a second name to hide a typo.
+
+**Escalation boundary:** Registry state, Ren fallback, and capability naming are runtime/operator concerns.
+
+### Missing prompt or schema
+
+**Symptom:** An LLM-backed `rev.invoke` returns a missing-prompt error, or arguments do not match the advertised input schema.
+
+**Likely cause:** The `llm` executor found none of `args.prompt`, `args.input`, `args.text`, or `input_schema.properties.prompt.default`.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/tools"
+```
+
+**Safe fix:** Send one of the prompt fields accepted by the current schema, or use its schema default. Do not invent a field that `/tools` does not advertise.
+
+**Escalation boundary:** If `/tools` and the capability schema disagree, stop changing payloads and have the operator reconcile registration.
+
+### Unconfigured Store namespace
+
+**Symptom:** Creation or invocation fails before the executor with a namespace-not-configured error.
+
+**Likely cause:** A declared `store:` requirement names a namespace that is absent from the Store policy, or its scope cannot be resolved.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+curl -i "$AKR_BASE_URL/rev/functions/CAPABILITY_NAME"
+```
+
+**Safe fix:** Have the operator configure the namespace and its scope, then re-check the capability declaration; do not bypass the requirement.
+
+**Escalation boundary:** Store policy and capability declarations are operator/runtime configuration.
+
+### Store ACL denial
+
+**Symptom:** A Store-backed operation returns an `acl denied` error.
+
+**Likely cause:** The namespace exists, but the inherited origin, capability identity, or plugin identity does not satisfy its read/write policy.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+```
+
+Use the error text from the failed operation, not a data dump, to distinguish the ACL failure from a missing namespace or scope.
+
+**Safe fix:** Align the capability/plugin identity with the namespace ACL through the operator policy; do not copy data into an unrestricted namespace.
+
+**Escalation boundary:** ACLs, scopes, and Store context propagation are operator-owned.
+
+### Executor unavailable
+
+**Symptom:** Rev resolves the capability but invocation reports a process, artifact, NATS, or executor error.
+
+**Likely cause:** The selected revision's implementation is missing, its plugin is not loaded, NATS is unavailable, or the configured executor cannot start.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+curl -i "$AKR_BASE_URL/tools"
+curl -i "$AKR_BASE_URL/rev/functions/CAPABILITY_NAME"
+```
+
+**Safe fix:** Stop repeated calls, inspect the reported plugin and revision state, and let the operator repair the build or lifecycle. Do not switch to a duplicate capability name.
+
+**Escalation boundary:** Plugin processes, artifacts, builds, filesystem access, and network access belong to the operator.
+
+### Rollback or permission failure
+
+**Symptom:** A rollback request is rejected, or an otherwise valid tool call reports a permission error.
+
+**Likely cause:** The capability or target revision is unknown, the Gateway API key is missing, or the NATS subject for a plugin call is not permitted by kernel policy.
+
+**Safe probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/rev/functions/CAPABILITY_NAME"
+curl -i "$AKR_BASE_URL/tools"
+```
+
+The protected `POST /rev/functions/{name}/rollback` route accepts a `revision` field, and the `rev.rollback` tool schema requires `capability` and `revision`; do not use either mutation as a diagnostic in a shared environment.
+
+**Safe fix:** Have the operator verify the API key, target revision, and NATS permission, then perform the authorized rollback through the normal control surface.
+
+**Escalation boundary:** Gateway authentication, revision aliases, and NATS permissions are operator controls.
+
 ## Next
 
 - [Rev](/docs/runtime/rev)
 - [Plugins](/docs/extending/plugins)
 - [API first contact](/docs/reference/api-first-contact)
+- [Troubleshooting](/docs/reference/troubleshooting)
+- [End-to-end example](/docs/runtime/end-to-end)

@@ -2,5 +2,5 @@
   "title": "Introduction",
   "description": "Start with a task, then learn the runtime model.",
   "defaultOpen": true,
-  "pages": ["start-here", "index", "getting-started"]
+  "pages": ["start-here", "getting-started", "run-aki", "index"]
 }

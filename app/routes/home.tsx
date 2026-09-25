@@ -99,6 +99,7 @@ export default function Home() {
             <p>
               Three concrete doors into the runtime, followed by the deeper map.
               Prefer one trace? <Link to="/docs/runtime/end-to-end">Follow the end-to-end example</Link>.
+              Starting the product? <Link to="/docs/introduction/run-aki">Run Aki separately</Link>.
             </p>
           </div>
           <div className="aki-card-grid">

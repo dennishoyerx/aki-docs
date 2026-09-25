@@ -57,6 +57,7 @@ curl -i 'http://localhost:3000/api/search?query=Rev'
 
 - `/docs/introduction/start-here` — the three onboarding paths.
 - `/docs/introduction/getting-started` — local quickstart and next steps.
+- `/docs/introduction/run-aki` — start the Aki product separately from the docs site.
 - `/docs/reference/api-first-contact` — safe runtime discovery and response semantics.
 - `/docs/runtime/chat` — OpenAI-compatible, session, dispatch, and SSE flows.
 - `/docs/runtime/end-to-end` — one source-aligned fixture from request to result.

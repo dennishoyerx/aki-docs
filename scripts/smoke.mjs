@@ -10,9 +10,11 @@ const requiredFiles = [
   'content/docs/introduction/index.mdx',
   'content/docs/introduction/start-here.mdx',
   'content/docs/introduction/getting-started.mdx',
+  'content/docs/introduction/run-aki.mdx',
   'content/docs/architecture/index.mdx',
   'content/docs/runtime/index.mdx',
   'content/docs/runtime/end-to-end.mdx',
+  'content/docs/runtime/end-to-end.fixture.json',
   'content/docs/extending/index.mdx',
   'content/docs/extending/create-a-capability.mdx',
   'content/docs/reference/index.mdx',
@@ -81,6 +83,7 @@ const introductionMeta = JSON.parse(
   await readFile(join(root, 'content/docs/introduction/meta.json'), 'utf8'),
 );
 assert.equal(introductionMeta.pages[0], 'start-here');
+assert.ok(introductionMeta.pages.includes('run-aki'));
 const extendingMeta = JSON.parse(
   await readFile(join(root, 'content/docs/extending/meta.json'), 'utf8'),
 );
@@ -108,6 +111,12 @@ const publicPages = [
     route: '/docs/introduction/getting-started',
     title: 'Getting started',
     requiredText: ['bun install', 'bun run dev', 'bun run typecheck', 'bun run build', 'bun run smoke'],
+  },
+  {
+    file: 'content/docs/introduction/run-aki.mdx',
+    route: '/docs/introduction/run-aki',
+    title: 'Run Aki',
+    requiredText: ['docker compose up --build', 'localhost:18768/health', 'bun run smoke'],
   },
   {
     file: 'content/docs/reference/api-first-contact.mdx',
@@ -187,6 +196,29 @@ for (const page of publicPages) {
   assert.ok(docRoutes.has(page.route), `${page.file} does not resolve to ${page.route}`);
 }
 
+const fixture = JSON.parse(await readFile(join(root, 'content/docs/runtime/end-to-end.fixture.json'), 'utf8'));
+const fixtureExample = await readFile(join(root, 'content/docs/runtime/end-to-end.mdx'), 'utf8');
+assert.equal(fixture.fixture, 'aki-end-to-end');
+assert.equal(fixture.request.model, 'agent');
+assert.equal(fixture.request.stream, true);
+assert.equal(fixture.request.conversation_id, 'fixture-session');
+assert.equal(fixture.tool.name, 'rev.invoke');
+assert.equal(fixture.tool.args.name, 'sample.greet');
+assert.equal(fixture.sse.tool_frame.aki_tool.name, 'rev.invoke');
+assert.equal(fixture.sse.event_frame.subject, 'event.chat.done.fixture-session');
+assert.equal(fixture.sse.terminal.at(-1), '[DONE]');
+assert.equal(fixture.result.object, 'chat.completion');
+assert.equal(fixture.failure.status, 401);
+for (const text of [
+  'chatcmpl-fixture',
+  'sample.greet',
+  'event.chat.done.fixture-session',
+  'data: [DONE]',
+  'HTTP `401`',
+]) {
+  assert.ok(fixtureExample.includes(text), `end-to-end docs drifted from fixture: ${text}`);
+}
+
 const publicRoutes = new Set(['/', '/health', '/mcp', '/llms.txt', '/llms-full.txt', '/api/search']);
 const markdownLink = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
 for (const file of mdxFiles) {
@@ -227,6 +259,7 @@ if (baseUrl) {
   const llmsIndex = await (await fetchEndpoint('/llms.txt', 'text/plain')).text();
   for (const route of [
     '/docs/introduction/start-here',
+    '/docs/introduction/run-aki',
     '/docs/runtime/chat',
     '/docs/reference/security',
     '/docs/reference/troubleshooting',
@@ -237,7 +270,7 @@ if (baseUrl) {
     assert.ok(llmsIndex.includes(route), `llms.txt is missing ${route}`);
   }
   const llmsFull = await (await fetchEndpoint('/llms-full.txt', 'text/plain')).text();
-  for (const title of ['Start here', 'Chat and sessions', 'End-to-end example', 'Security and policy', 'Troubleshooting', 'FAQ']) {
+  for (const title of ['Start here', 'Run Aki', 'Chat and sessions', 'End-to-end example', 'Security and policy', 'Troubleshooting', 'FAQ']) {
     assert.ok(llmsFull.includes(`# ${title}`), `llms-full.txt is missing ${title}`);
   }
 
@@ -284,6 +317,11 @@ if (baseUrl) {
     faqSearch.some((result) => result.url === '/docs/reference/faq'),
     'local search did not return the FAQ page',
   );
+  const runAkiSearch = await (await fetchEndpoint('/api/search?query=Run%20Aki', 'application/json')).json();
+  assert.ok(
+    runAkiSearch.some((result) => result.url === '/docs/introduction/run-aki'),
+    'local search did not return the Run Aki page',
+  );
 
   const mcpRequest = async (id, method, params) => {
     const response = await fetch(new URL('/mcp', baseUrl), {
@@ -321,6 +359,7 @@ if (baseUrl) {
   });
   const pageListText = pageList.result.content[0].text;
   for (const route of [
+    '/docs/introduction/run-aki',
     '/docs/runtime/chat',
     '/docs/runtime/end-to-end',
     '/docs/reference/security',
@@ -357,13 +396,19 @@ if (baseUrl) {
   });
   assert.match(fetched.result.content[0].text, /Start here/);
 
-  const endToEndPage = await mcpRequest(8, 'tools/call', {
+  const runAkiPage = await mcpRequest(8, 'tools/call', {
+    name: 'get_page',
+    arguments: { url: '/docs/introduction/run-aki' },
+  });
+  assert.match(runAkiPage.result.content[0].text, /Run Aki/);
+
+  const endToEndPage = await mcpRequest(9, 'tools/call', {
     name: 'get_page',
     arguments: { url: '/docs/runtime/end-to-end' },
   });
   assert.match(endToEndPage.result.content[0].text, /End-to-end example/);
 
-  const securityPage = await mcpRequest(9, 'tools/call', {
+  const securityPage = await mcpRequest(10, 'tools/call', {
     name: 'get_page',
     arguments: { url: '/docs/reference/security' },
   });

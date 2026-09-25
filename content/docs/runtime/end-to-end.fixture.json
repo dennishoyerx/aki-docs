@@ -1,0 +1,89 @@
+{
+  "fixture": "aki-end-to-end",
+  "request": {
+    "model": "agent",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Run the sample greeting capability for Ada."
+      }
+    ],
+    "stream": true,
+    "conversation_id": "fixture-session"
+  },
+  "tool": {
+    "name": "rev.invoke",
+    "args": {
+      "name": "sample.greet",
+      "args": {
+        "name": "Ada"
+      }
+    }
+  },
+  "sse": {
+    "tool_frame": {
+      "id": "chatcmpl-fixture",
+      "object": "chat.completion.chunk",
+      "created": 0,
+      "model": "agent",
+      "aki_tool": {
+        "name": "rev.invoke",
+        "status": "running",
+        "args": "{\"name\":\"sample.greet\",\"args\":{\"name\":\"Ada\"}}",
+        "duration_ms": 0
+      },
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": null
+        }
+      ]
+    },
+    "event_frame": {
+      "subject": "event.chat.done.fixture-session",
+      "data": {
+        "content": "Hello, Ada"
+      },
+      "timestamp": 0,
+      "ts_ms": 0
+    },
+    "terminal": [
+      {
+        "id": "chatcmpl-fixture",
+        "object": "chat.completion.chunk",
+        "created": 0,
+        "model": "agent",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {},
+            "finish_reason": "stop"
+          }
+        ]
+      },
+      "[DONE]"
+    ]
+  },
+  "result": {
+    "id": "chatcmpl-fixture",
+    "object": "chat.completion",
+    "created": 0,
+    "model": "agent",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Hello, Ada"
+        },
+        "finish_reason": "stop"
+      }
+    ]
+  },
+  "failure": {
+    "route": "/rev/functions",
+    "status": 401,
+    "reason": "missing Gateway API key"
+  }
+}
