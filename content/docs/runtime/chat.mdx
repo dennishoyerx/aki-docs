@@ -1,37 +1,110 @@
 ---
 title: Chat and sessions
-description: The OpenAI-compatible, session-oriented, and WebSocket chat surfaces.
+description: The OpenAI-compatible, session-oriented, dispatch, and streaming chat surfaces.
 ---
 
-AKR exposes three related chat styles over the same Agent and Rev execution model.
+AKR exposes several chat-shaped routes over the same Agent and Rev execution model. The examples on this page are runtime-specific; use the [API first contact](/docs/reference/api-first-contact) page for the safe placeholder setup and response matrix.
 
 ## OpenAI-compatible completion
 
 | Method and path | Purpose |
 | --- | --- |
-| `GET /v1/models` | List model IDs currently exposed by the gateway. |
+| `GET /v1/models` | List model IDs currently exposed by the Gateway. |
 | `POST /v1/chat/completions` | Complete a chat with optional SSE streaming. |
 
-A request carries `model`, `messages`, and `stream`. Non-streaming responses use the OpenAI chat-completion shape. Streaming responses use Server-Sent Events and end with `[DONE]`.
+The current handler requires a non-empty `messages` array. `model` defaults to `Aki`, and `stream` defaults to `false`:
 
-## Session-oriented chat
+```json
+{
+  "model": "agent",
+  "messages": [{ "role": "user", "content": "Summarize the request chain." }],
+  "stream": false
+}
+```
 
-| Method and path | Purpose |
+`agent` and `agent/*` select the Agent path. Other model values select the single-LLM path. For the LLM path, the handler also reads `max_tokens` or `maxTokens` and `temperature`; for the Agent path it reads `conversation_id` or `user` and may read `channel` when streaming.
+
+A non-streaming success has the following established shape:
+
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 0,
+  "model": "agent",
+  "choices": [{
+    "index": 0,
+    "message": { "role": "assistant", "content": "..." },
+    "finish_reason": "stop"
+  }]
+}
+```
+
+For `stream: true`, the handler returns SSE chunks with `object: "chat.completion.chunk"`. Agent-model chunks may include `delta.reasoning_content`, `aki_tool`, or `aki_render`. A successful stream ends with a stop chunk and the literal `[DONE]`; a subscription failure can emit an error object before `[DONE]`.
+
+## Session-oriented flow
+
+| Method and path | Purpose and established input |
 | --- | --- |
-| `GET /chat/sessions` | List sessions, optionally filtered by user or source. |
-| `POST /chat/sessions` | Create a session or send into an existing session. |
+| `GET /chat/sessions` | List sessions; optional `user_id` and `source` query parameters. |
+| `POST /chat/sessions` | Without `session_id`, forward the body to `chat.session.create`; with `session_id`, send `text` and optional `channel` to an existing session. |
 | `GET /chat/sessions/{id}` | Read one session. |
-| `GET /chat/sessions/{id}/messages` | Read history with optional pagination and channel filters. |
-| `POST /chat/sessions/{id}/messages` | Create a message. |
-| `GET /chat/stream/{sessionId}` | Stream chat events as SSE. |
-| `POST /chat/dispatch` | Queue an asynchronous Agent turn. |
-| `POST /chat/cancel/{sessionId}` | Request cancellation. |
+| `GET /chat/sessions/{id}/messages` | Read messages; optional `limit`, `before`, and `channel` query parameters. |
+| `POST /chat/sessions/{id}/messages` | Create a message; the handler forwards optional `role`, `content`, and `timestamp` fields. |
+| `GET /chat/stream/{sessionId}` | Stream session events as SSE. |
+| `POST /chat/cancel/{sessionId}` | Publish cancellation; success is `200` with `status: "cancelling"`. |
+| `GET /chat/users/identify` | Resolve a user from `channel` and `external_id` query parameters. |
 | `GET /ws/chat` | WebSocket chat transport. |
 
-`POST /chat/dispatch` returns `202` with `{"ok":true,"status":"accepted"}` after publishing the turn. It is not a handle/result workflow. Use native `agent.dispatch` and pass its returned `session_id` to `agent.result` when a retrievable background result is required.
+The session-create tool owns the full creation schema; this HTTP handler does not establish extra required fields. Existing-session mode is explicit: when `session_id` is present, the handler calls the Agent path and returns `200` with `ok: true` and `result`.
+
+The session stream emits `data:` frames of type `token`, `reasoning`, `tool`, `notice`, or terminal `done`. It ends on `done` or after 120 seconds without an event. The OpenAI stream uses `[DONE]` as its terminal marker instead.
+
+## Dispatch and status
+
+`POST /chat/dispatch` requires a non-empty `message` and optionally accepts `session_id` (or `sessionId`) and `model`:
+
+```json
+{
+  "message": "Summarize the request chain.",
+  "session_id": "SESSION_ID"
+}
+```
+
+It publishes the turn and returns HTTP `202` with:
+
+```json
+{ "ok": true, "status": "accepted" }
+```
+
+`accepted` is not a completion result. The Gateway also registers `GET /chat/dispatch/{taskId}`. It returns HTTP `200` with `status: "pending"` when no result is present, or `status: "completed"` with a `result` when one is present.
+
+The current POST handler does not return a task ID, and the source does not establish a direct mapping from its generated ID to the status map. Therefore this status route is not a guaranteed completion handle for `POST /chat/dispatch`. The native `agent.dispatch` tool returns a `session_id`; use that value with `agent.result` when a background result handle is required.
+
+## Response and error matrix
+
+| Surface | Status or marker | Meaning |
+| --- | --- | --- |
+| OpenAI non-stream | `200` | `chat.completion` response. |
+| OpenAI stream | SSE | Chunks, then a stop chunk and `[DONE]`. |
+| Session create | `201` | `ok: true` with `session`. |
+| Existing-session send | `200` | `ok: true` with `result`. |
+| Dispatch | `202` | `status: "accepted"`; queued, not complete. |
+| Dispatch status | `200` | `pending` or `completed`. |
+| Empty `messages` or dispatch `message` | `400` | Request validation failed. |
+| Missing/wrong API key | `401` | Gateway authentication error. |
+| NATS/internal dispatch failure | `500` | Runtime error body. |
+| OpenAI timeout / other upstream failure | `504` / `502` | Classified by the chat handler. |
+
+The current source does not establish a universal `403` response. For route inventory, browser proxy paths, and the separate documentation MCP service, see [API routes](/docs/reference/api-routes). For symptom-first probes, see [Troubleshooting](/docs/reference/troubleshooting).
 
 ## Browser proxying
 
-A browser may call `/api/...`; the proxy strips `/api` before forwarding to AKR. Thus `/api/v1/chat/completions` maps to `/v1/chat/completions`, and `/api/chat/...` maps to `/chat/...`. The `/api` prefix is not a kernel route.
+A browser may call `/api/...`; the proxy strips `/api` before forwarding to AKR. Thus `/api/v1/chat/completions` maps to `/v1/chat/completions`, and `/api/chat/...` maps to `/chat/...`. The `/api` prefix is not a Kernel route.
 
-Chat requests ask the [Agent](/docs/architecture/agent-rev) to decide and act. Rev owns any selected capability, while session and Store access remain context-bound.
+## Next
+
+- [API first contact](/docs/reference/api-first-contact)
+- [API routes](/docs/reference/api-routes)
+- [Security and policy](/docs/reference/security)
+- [Troubleshooting](/docs/reference/troubleshooting)

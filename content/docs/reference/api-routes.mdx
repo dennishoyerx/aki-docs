@@ -1,36 +1,128 @@
 ---
 title: API routes
-description: Stable public route anchors for discovery, events, MCP, UI, Rev, and chat.
+description: An honest route index for the AKR Gateway, browser proxy, and documentation service.
 ---
 
-These are kernel routes registered by the gateway. A browser may add the `/api` proxy prefix, but the proxy strips it before forwarding. For a safe discovery-first walkthrough, read [API first contact](/docs/reference/api-first-contact).
+This page separates three services that are easy to confuse: the AKR Gateway, the browser-facing `/api` proxy, and this documentation site. The Gateway route list below reflects the current route composition; live tool inventories and schemas still come from `GET /tools`.
 
-| Area | Routes |
+## AKR Gateway public discovery
+
+When the Gateway API-key middleware is enabled, these three routes remain public:
+
+| Method and path | Purpose |
 | --- | --- |
-| Health and discovery | `GET /health`, `GET /tools`, `GET /v1/models` |
-| Events | `GET /events/poll`, `GET /events/stream` |
-| MCP | `/mcp` |
-| UI metadata | `GET /ui/components`, `GET /ui/nav`, `GET /ui/apps/{id}` |
-| Rev | `GET /rev/functions`, detail, invoke, revision, rollback, traffic, and metrics subroutes |
-| OpenAI-compatible chat | `POST /v1/chat/completions` |
-| Session chat | `/chat/*` |
-| WebSocket chat | `GET /ws/chat` |
+| `GET /health` | Runtime health snapshot, including service, plugin, Store, MCP, and event-storm summaries. |
+| `GET /tools` | Current tool sets, names, descriptions, and input schemas. |
+| `GET /v1/models` | Model IDs currently exposed by the Gateway. |
 
-## Rev routes
+These are Gateway routes. The documentation site's `/health` is a different service response.
 
-The main Rev operations are:
+## Protected AKR Gateway routes
 
-- `GET /rev/functions` — list capability identity and state;
-- `GET /rev/functions/{name}` — inspect one capability;
-- `POST /rev/functions/{name}/invoke` — invoke the selected capability;
-- revision, rollback, traffic, and metrics subroutes — operate on the same Rev identity.
+When `AKR_API_KEY` is configured, the remaining Gateway routes are protected. The middleware accepts `x-api-key` or `Authorization: Bearer <key>`; see [Security and policy](/docs/reference/security).
 
-## Browser proxy examples
+| Method and path | Purpose |
+| --- | --- |
+| `GET /mcp`, `POST /mcp` | AKR Gateway MCP JSON-RPC and SSE transport. This is not the documentation MCP service. |
+| `POST /v1/chat/completions` | OpenAI-compatible chat completion with optional SSE. |
+| `GET /events/poll` | Read the buffered event view. |
+| `GET /events/stream` | Subscribe to matching events as SSE. |
+| `GET /chat/sessions`, `POST /chat/sessions` | List or create sessions, or send into an existing session. |
+| `GET /chat/sessions/{id}` | Read one session. |
+| `GET /chat/sessions/{id}/messages` | Read session history. |
+| `POST /chat/sessions/{id}/messages` | Create a session message. |
+| `GET /chat/stream/{sessionId}` | Stream session events as SSE. |
+| `POST /chat/dispatch` | Queue an asynchronous Agent turn. |
+| `GET /chat/dispatch/{taskId}` | Return `pending` or `completed` for a task ID present in the status map. |
+| `POST /chat/cancel/{sessionId}` | Request cancellation. |
+| `GET /chat/users/identify` | Resolve a user from channel identity parameters. |
+| `GET /ws/chat` | WebSocket chat transport. |
+| `GET /ui/components`, `GET /ui/nav`, `GET /ui/apps/{id}` | UI metadata. |
+| `GET /config`, `POST /config` | Read or update runtime configuration. |
+| `GET /store/namespaces` | List configured Store namespaces. |
+| `GET /usage/llm` | Read LLM usage. |
+| `POST /admin/storm/reset` | Reset a persistent event-storm breaker. |
 
-| Browser path | Kernel path |
+Other operator and runtime families are also mounted behind the same middleware; use the current service or source when a route is not listed here.
+
+## Browser proxy
+
+The browser application proxies `/api/<path>` to the Gateway and strips `/api` before forwarding. `/api` is not an AKR Gateway route.
+
+| Browser path | Gateway path |
 | --- | --- |
 | `/api/rev/functions` | `/rev/functions` |
 | `/api/v1/chat/completions` | `/v1/chat/completions` |
 | `/api/chat/sessions` | `/chat/sessions` |
+| `/api/events/stream` | `/events/stream` |
 
-`/api` itself is not a kernel route. The gateway route composition and browser proxy boundary are described in [Architecture](/docs/architecture/boundaries).
+The proxy is an ingress convention, not a second Gateway or a new capability layer.
+
+## Events
+
+| Method and path | Protocol or response |
+| --- | --- |
+| `GET /events/poll?since=<timestamp>` | JSON with `events`, `count`, and `since`; an invalid or missing `since` is read as `0`. |
+| `GET /events/stream?prefix=<prefixes>` | SSE `data:` frames containing `subject`, `data`, `timestamp`, and `ts_ms`; `prefix` is comma-separated and the stream ends after 120 seconds without an event. |
+
+Both routes are protected when the Gateway key is enabled. If NATS is unavailable, the stream handler returns a runtime error rather than a successful empty stream.
+
+## Chat and sessions
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /v1/models` | Public model discovery. |
+| `POST /v1/chat/completions` | Protected OpenAI-compatible completion; see [API first contact](/docs/reference/api-first-contact). |
+| `GET /chat/sessions` | List sessions with optional `user_id` and `source` filters. |
+| `POST /chat/sessions` | Create a session, or send `text` with `session_id` into an existing one. |
+| `GET /chat/sessions/{id}` | Read a session. |
+| `GET /chat/sessions/{id}/messages` | Read messages with optional `limit`, `before`, and `channel`. |
+| `POST /chat/sessions/{id}/messages` | Create a message from optional `role`, `content`, and `timestamp`. |
+| `GET /chat/stream/{sessionId}` | SSE token, reasoning, tool, notice, and terminal `done` frames. |
+| `POST /chat/dispatch` | Protected asynchronous dispatch; `202` means accepted. |
+| `GET /chat/dispatch/{taskId}` | `200` with `pending` or `completed`; the current POST response does not supply a task ID. |
+| `POST /chat/cancel/{sessionId}` | Request cancellation. |
+| `GET /ws/chat` | WebSocket transport. |
+
+The handler does not establish a universal `403` response. See [Chat and sessions](/docs/runtime/chat) for request fields, terminal markers, and the dispatch limitation.
+
+## Rev
+
+All Rev routes below are protected when the Gateway key is enabled:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /rev/functions` | List capability identity, kind, executor metadata, status, and revision state. |
+| `GET /rev/functions/{name}` | Inspect one capability and its revisions. |
+| `POST /rev/functions/{name}/invoke` | Invoke the selected capability; the body carries `args`. |
+| `POST /rev/functions/{name}/revisions` | Store source for a new revision. |
+| `POST /rev/functions/{name}/rollback` | Select an earlier revision. |
+| `POST /rev/functions/{name}/traffic` | Set traffic weights for the capability. |
+| `GET /rev/functions/{name}/metrics` | Read metrics for the capability. |
+
+Rev owns identity and selection; an executor is an implementation detail. See [Rev](/docs/runtime/rev) and [Create and invoke a capability](/docs/extending/create-a-capability).
+
+## Documentation surfaces
+
+These are routes served by `aki-docs`, not AKR Gateway routes:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /` | Documentation home. |
+| `GET /health` | Documentation service health; it does not start AKR. |
+| `GET /docs/*` | HTML documentation, including Start here, Security, Troubleshooting, and the glossary. |
+| `GET /docs/<page>.md` | Processed Markdown for one page. |
+| `GET /llms.txt` | Page index and descriptions. |
+| `GET /llms-full.txt` | Complete processed corpus. |
+| `GET /api/search?query=...` | Local full-text search. |
+| `GET/POST /mcp` | Documentation MCP tools: `list_pages`, `get_page`, and `search`. |
+
+The documentation `/mcp` and the AKR Gateway `/mcp` are different services with different tool inventories. The shared docs source and search helpers keep the documentation HTML, Markdown, LLM, search, and MCP representations aligned.
+
+## Next
+
+- [API first contact](/docs/reference/api-first-contact)
+- [Chat and sessions](/docs/runtime/chat)
+- [Security and policy](/docs/reference/security)
+- [Troubleshooting](/docs/reference/troubleshooting)
+- [Start here](/docs/introduction/start-here)

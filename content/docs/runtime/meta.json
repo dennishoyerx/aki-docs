@@ -1,6 +1,6 @@
 {
   "title": "Runtime",
-  "description": "Chat, sessions, events, and the execution surface.",
+  "description": "Chat, sessions, events, policy, and the execution surface.",
   "defaultOpen": true,
   "pages": ["index", "chat", "events", "rev", "store"]
 }

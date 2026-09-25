@@ -17,6 +17,8 @@ const requiredFiles = [
   'content/docs/reference/index.mdx',
   'content/docs/reference/api-first-contact.mdx',
   'content/docs/reference/api-routes.mdx',
+  'content/docs/reference/security.mdx',
+  'content/docs/reference/troubleshooting.mdx',
   'content/docs/reference/glossary.mdx',
   'content/docs/development/index.mdx',
   'app/routes/mcp.ts',
@@ -85,9 +87,11 @@ const referenceMeta = JSON.parse(
   await readFile(join(root, 'content/docs/reference/meta.json'), 'utf8'),
 );
 assert.ok(referenceMeta.pages.includes('api-first-contact'));
+assert.ok(referenceMeta.pages.includes('security'));
+assert.ok(referenceMeta.pages.includes('troubleshooting'));
 assert.ok(referenceMeta.pages.includes('glossary'));
 
-const onboardingPages = [
+const publicPages = [
   {
     file: 'content/docs/introduction/start-here.mdx',
     route: '/docs/introduction/start-here',
@@ -132,12 +136,36 @@ const onboardingPages = [
     title: 'Create and invoke a capability',
     requiredText: ['rev.create', 'rev.invoke', '/rev/functions/hello.greet/invoke'],
   },
+  {
+    file: 'content/docs/runtime/chat.mdx',
+    route: '/docs/runtime/chat',
+    title: 'Chat and sessions',
+    requiredText: ['chat.completion', 'SSE', 'pending', 'completed', '[DONE]'],
+  },
+  {
+    file: 'content/docs/reference/api-routes.mdx',
+    route: '/docs/reference/api-routes',
+    title: 'API routes',
+    requiredText: ['AKR Gateway public discovery', 'browser proxy', 'documentation MCP'],
+  },
+  {
+    file: 'content/docs/reference/security.mdx',
+    route: '/docs/reference/security',
+    title: 'Security and policy',
+    requiredText: ['AKR_API_KEY', 'x-api-key', 'Store', 'fail closed', 'operator'],
+  },
+  {
+    file: 'content/docs/reference/troubleshooting.mdx',
+    route: '/docs/reference/troubleshooting',
+    title: 'Troubleshooting',
+    requiredText: ['404 or blank docs route', 'MCP returns 400, 403, or 405', 'bun run smoke'],
+  },
 ];
 
-for (const page of onboardingPages) {
+for (const page of publicPages) {
   const content = await readFile(join(root, page.file), 'utf8');
   for (const text of page.requiredText) {
-    assert.ok(content.includes(text), `${page.file} is missing onboarding text: ${text}`);
+    assert.ok(content.includes(text), `${page.file} is missing public text: ${text}`);
   }
   assert.ok(docRoutes.has(page.route), `${page.file} does not resolve to ${page.route}`);
 }
@@ -180,28 +208,26 @@ if (baseUrl) {
   const healthResponse = await fetchEndpoint('/health', 'application/json');
   assert.equal((await healthResponse.json()).service, 'aki-docs');
   const llmsIndex = await (await fetchEndpoint('/llms.txt', 'text/plain')).text();
-  assert.ok(llmsIndex.includes('/docs/introduction/start-here'));
+  for (const route of [
+    '/docs/introduction/start-here',
+    '/docs/runtime/chat',
+    '/docs/reference/security',
+    '/docs/reference/troubleshooting',
+    '/docs/reference/api-routes',
+  ]) {
+    assert.ok(llmsIndex.includes(route), `llms.txt is missing ${route}`);
+  }
   const llmsFull = await (await fetchEndpoint('/llms-full.txt', 'text/plain')).text();
-  assert.ok(llmsFull.includes('# Start here'));
+  for (const title of ['Start here', 'Chat and sessions', 'Security and policy', 'Troubleshooting']) {
+    assert.ok(llmsFull.includes(`# ${title}`), `llms-full.txt is missing ${title}`);
+  }
 
-  const renderedPages = new Map();
-  for (const page of onboardingPages) {
+  for (const page of publicPages) {
     const html = await (await fetchEndpoint(page.route, 'text/html')).text();
-    renderedPages.set(page.route, html);
     assert.ok(html.includes(page.title), `${page.route} did not render its title`);
 
     const markdown = await (await fetchEndpoint(`${page.route}.md`, 'text/markdown')).text();
     assert.ok(markdown.includes(`# ${page.title}`), `${page.route}.md did not include its title`);
-  }
-
-  for (const text of onboardingPages[0].requiredText) {
-    assert.ok(renderedPages.get(onboardingPages[0].route).includes(text), `Start here page did not render: ${text}`);
-  }
-  for (const text of onboardingPages[2].requiredText) {
-    assert.ok(
-      renderedPages.get(onboardingPages[2].route).includes(text),
-      `API first contact page did not render: ${text}`,
-    );
   }
 
   const searchResponse = await fetchEndpoint('/api/search?query=Rev', 'application/json');
@@ -214,6 +240,18 @@ if (baseUrl) {
   assert.ok(
     glossarySearch.some((result) => result.url === '/docs/reference/glossary'),
     'local search did not return the glossary page',
+  );
+  const securitySearch = await (await fetchEndpoint('/api/search?query=security', 'application/json')).json();
+  assert.ok(
+    securitySearch.some((result) => result.url === '/docs/reference/security'),
+    'local search did not return the security page',
+  );
+  const troubleshootingSearch = await (
+    await fetchEndpoint('/api/search?query=troubleshooting', 'application/json')
+  ).json();
+  assert.ok(
+    troubleshootingSearch.some((result) => result.url === '/docs/reference/troubleshooting'),
+    'local search did not return the troubleshooting page',
   );
 
   const mcpRequest = async (id, method, params) => {
@@ -246,18 +284,40 @@ if (baseUrl) {
   assert.deepEqual(listed.result.tools[1].inputSchema.required, ['url']);
   assert.deepEqual(listed.result.tools[2].inputSchema.required, ['query']);
 
-  const called = await mcpRequest(3, 'tools/call', {
+  const pageList = await mcpRequest(3, 'tools/call', {
+    name: 'list_pages',
+    arguments: {},
+  });
+  const pageListText = pageList.result.content[0].text;
+  for (const route of ['/docs/runtime/chat', '/docs/reference/security', '/docs/reference/troubleshooting']) {
+    assert.ok(pageListText.includes(route), `MCP list_pages is missing ${route}`);
+  }
+
+  const called = await mcpRequest(4, 'tools/call', {
     name: 'search',
     arguments: { query: 'Rev' },
   });
   const mcpResults = JSON.parse(called.result.content[0].text);
   assert.ok(mcpResults.some((result) => result.url === '/docs/runtime/rev'));
 
-  const fetched = await mcpRequest(4, 'tools/call', {
+  const mcpSecuritySearch = await mcpRequest(5, 'tools/call', {
+    name: 'search',
+    arguments: { query: 'security' },
+  });
+  const securityResults = JSON.parse(mcpSecuritySearch.result.content[0].text);
+  assert.ok(securityResults.some((result) => result.url === '/docs/reference/security'));
+
+  const fetched = await mcpRequest(6, 'tools/call', {
     name: 'get_page',
     arguments: { url: '/docs/introduction/start-here' },
   });
   assert.match(fetched.result.content[0].text, /Start here/);
+
+  const securityPage = await mcpRequest(7, 'tools/call', {
+    name: 'get_page',
+    arguments: { url: '/docs/reference/security' },
+  });
+  assert.match(securityPage.result.content[0].text, /Security and policy/);
 }
 
 process.stdout.write('aki-docs smoke: ok\n');

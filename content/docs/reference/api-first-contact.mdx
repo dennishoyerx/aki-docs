@@ -1,22 +1,22 @@
 ---
 title: API first contact
-description: Make a safe first discovery and invocation request to an AKR Gateway.
+description: Make safe discovery, chat, session, and dispatch requests to an AKR Gateway.
 ---
 
-These examples are runtime-specific. The placeholder below is not a deployment address; replace it with the Gateway address supplied by your operator. The documentation site has its own `/health` route and does not start the AKR runtime.
+These examples are runtime-specific. `AKR_BASE_URL` is a reserved placeholder, not a deployment address; replace it only in a local shell. This documentation site has its own `/health` and `/mcp` services and does not start the AKR Gateway.
 
 ## Discover the Gateway
 
-`/health` and `/tools` are the safest first checks. `/v1/models` is also public when the Gateway is available.
+When `AKR_API_KEY` is configured, the Gateway keeps discovery open and protects the runtime routes:
 
 ```sh
-export AKR_BASE_URL="https://aki-gateway.example.invalid"
+export AKR_BASE_URL="https://api.example.invalid"
 curl -i "$AKR_BASE_URL/health"
 curl -i "$AKR_BASE_URL/tools"
 curl -i "$AKR_BASE_URL/v1/models"
 ```
 
-If `AKR_API_KEY` is configured, protected routes need a key. The value below is deliberately non-secret and must be replaced locally; never commit a real key.
+`/health` returns a runtime health snapshot, `/tools` returns `tool_sets`, and `/v1/models` returns an object with `data` model entries. A protected request can use the non-secret placeholder below while testing locally; never commit or log a real key.
 
 ```sh
 curl -i \
@@ -24,31 +24,101 @@ curl -i \
   "$AKR_BASE_URL/rev/functions"
 ```
 
-The current Gateway middleware exempts `/health`, `/tools`, and `/v1/models` from the API-key check. Other routes depend on the operator's configuration.
+The current middleware accepts `x-api-key` or `Authorization: Bearer <key>` when a key is configured. If `AKR_API_KEY` is empty, the middleware does not reject requests. See [Security and policy](/docs/reference/security) for the boundary.
 
-## Browser path or kernel path?
+## OpenAI-compatible completion
 
-`/api/...` is a browser proxy convention. The proxy strips `/api` before forwarding to the Kernel; it is not another Kernel route.
+The smallest request established by the current handler is a non-empty `messages` array. `model` defaults to `Aki`; `stream` defaults to `false`. A model named `agent` or beginning with `agent/` uses the Agent path; other model values use the single-LLM path.
 
-| Browser path | Kernel path |
-| --- | --- |
-| `/api/rev/functions` | `/rev/functions` |
-| `/api/v1/chat/completions` | `/v1/chat/completions` |
-| `/api/chat/sessions` | `/chat/sessions` |
+```sh
+curl -i -X POST "$AKR_BASE_URL/v1/chat/completions" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  -d '{"model":"agent","messages":[{"role":"user","content":"Summarize the request chain."}]}'
+```
 
-## Accepted, streamed, completed, or failed
+A non-streaming success has this shape; `id`, `created`, and `content` vary:
 
-A runtime call has more than one useful outcome:
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 0,
+  "model": "agent",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "..." },
+      "finish_reason": "stop"
+    }
+  ]
+}
+```
 
-- **`202 Accepted`** — `POST /chat/dispatch` has published the turn and returns a body like `{"ok":true,"status":"accepted"}`. It means work was queued, not that the answer is finished.
-- **SSE** — a streaming route such as `GET /chat/stream/{sessionId}` or `GET /events/stream` keeps the connection open and sends `data:` frames. An OpenAI-compatible stream ends with `[DONE]`.
-- **Completed** — a non-streaming HTTP response has arrived, or a stream has delivered its terminal `done` event/`[DONE]`. Do not treat `accepted` as completion.
-- **Error** — a non-2xx response or an error frame reports a failed request. Read the returned `error` message, fix the request or policy, and do not log credentials.
+For `stream: true`, the response is Server-Sent Events. Chunks use `object: "chat.completion.chunk"` and carry `choices`; Agent-model streams may also carry `reasoning_content`, `aki_tool`, or `aki_render` fields. A successful stream ends with a `finish_reason: "stop"` chunk and the literal marker `[DONE]`. An Agent stream can emit an error object before `[DONE]` if its event subscription fails. The route does not require a separate result endpoint for a streamed completion.
 
-For a complete route index, see [API routes](/docs/reference/api-routes). To continue with a capability, see [Create and invoke a capability](/docs/extending/create-a-capability).
+## Session-oriented flow
+
+Use the session routes when a conversation, history, or channel stream matters more than the OpenAI request shape:
+
+| Method and path | Request or query established by the handler | Success shape |
+| --- | --- | --- |
+| `GET /chat/sessions` | Optional `user_id` and `source` query parameters | `200` with `ok: true` and `sessions` |
+| `POST /chat/sessions` | Without `session_id`, the JSON body is forwarded to `chat.session.create`; with `session_id`, send `text` and optional `channel` | `201` with `session`, or `200` with `result` for an existing session |
+| `GET /chat/sessions/{id}` | Session ID in the path | `200` with `session` |
+| `GET /chat/sessions/{id}/messages` | Optional `limit`, `before`, and `channel` query parameters | `200` with `messages` |
+| `POST /chat/sessions/{id}/messages` | Optional `role`, `content`, and `timestamp` fields | `201` with `message` |
+| `GET /chat/stream/{sessionId}` | Session ID in the path | SSE `data:` frames |
+| `POST /chat/cancel/{sessionId}` | Session ID in the path | `200` with `status: "cancelling"` |
+
+The create-session request schema is implemented by the session tool rather than fully described by this handler; do not invent additional required fields. The session stream emits `token`, `reasoning`, `tool`, `notice`, and terminal `done` frames, and ends on `done` or after 120 seconds without an event.
+
+## Dispatch and status
+
+`POST /chat/dispatch` requires a non-empty `message`. It also accepts `session_id` (or `sessionId`) and an optional `model`:
+
+```sh
+curl -i -X POST "$AKR_BASE_URL/chat/dispatch" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  -d '{"message":"Summarize the request chain.","session_id":"SESSION_ID"}'
+```
+
+The current handler publishes the turn and returns:
+
+```json
+{ "ok": true, "status": "accepted" }
+```
+
+with HTTP `202`. That means accepted, not completed. The Gateway also registers `GET /chat/dispatch/{taskId}`:
+
+| Status | Body | Meaning |
+| --- | --- | --- |
+| `200` | `{"ok":true,"status":"pending"}` | No result is present in the status map. |
+| `200` | `{"ok":true,"status":"completed","result":...}` | A result is present. |
+
+The current `POST /chat/dispatch` response does not return a task ID, and the source does not establish a direct handoff from its generated ID to this status map. Do not promise that polling this route is a completion handle for that POST. For a native background workflow with a real handle, the current tools are `agent.dispatch` followed by `agent.result` with the returned `session_id`.
+
+## Response and error matrix
+
+| Surface | Status or marker | What the current source establishes |
+| --- | --- | --- |
+| OpenAI non-stream | `200` | `chat.completion` with one assistant choice. |
+| OpenAI stream | SSE | Chunks, then a stop chunk and `[DONE]`. |
+| Session create | `201` | `ok: true` and `session`. |
+| Existing-session send | `200` | `ok: true` and `result`. |
+| Dispatch | `202` | `status: "accepted"`; work is queued. |
+| Dispatch status | `200` | `pending` or `completed` as shown above. |
+| Empty OpenAI `messages` or empty dispatch `message` | `400` | Validation error before work starts. |
+| Missing or wrong Gateway key | `401` | JSON error asking for `x-api-key` or Bearer authentication. |
+| NATS or internal dispatch failure | `500` | Runtime error body; inspect its `error` field. |
+| OpenAI upstream timeout / other upstream failure | `504` / `502` | The chat handler classifies timeout and other call failures this way. |
+
+The handler does not establish a universal `403` response. See [Chat and sessions](/docs/runtime/chat), [API routes](/docs/reference/api-routes), and [Troubleshooting](/docs/reference/troubleshooting) for route-specific limits.
 
 ## Next
 
-- [Create and invoke a capability](/docs/extending/create-a-capability)
-- [Rev](/docs/runtime/rev)
-- [Guardrails](/docs/reference/guardrails)
+- [Chat and sessions](/docs/runtime/chat)
+- [Security and policy](/docs/reference/security)
+- [Troubleshooting](/docs/reference/troubleshooting)
+- [API routes](/docs/reference/api-routes)

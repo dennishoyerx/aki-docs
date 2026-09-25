@@ -1,0 +1,40 @@
+---
+title: Security and policy
+description: The public Gateway surface, API-key boundary, Store ACLs, and operator responsibilities.
+---
+
+This page describes the policy boundary implemented by the current AKR Gateway and Store. It does not describe a deployment's private configuration.
+
+## Gateway access
+
+The Gateway reads `AKR_API_KEY` at startup. When the value is empty, the API-key middleware does not reject requests. When it is non-empty, the middleware protects the runtime routes and exempts exactly these paths:
+
+| Method and path | Access when `AKR_API_KEY` is set | Purpose |
+| --- | --- | --- |
+| `GET /health` | Public | Runtime health snapshot. |
+| `GET /tools` | Public | Current tool sets and schemas. |
+| `GET /v1/models` | Public | Model IDs currently exposed by the Gateway. |
+
+All other Gateway routes are protected by the same middleware. A protected request may present the key as `x-api-key` or as `Authorization: Bearer <key>`. The comparison is against the configured Gateway value; keys are not accepted from a query parameter.
+
+The documentation site has a separate `/health` route and a separate `/mcp` endpoint. A successful docs health response does not authenticate or start an AKR Gateway.
+
+## Store policy
+
+Store access is context-bound. The current policy checks namespace, scope, origin, and the namespace ACL before a backend operation:
+
+- An unconfigured namespace must fail closed.
+- A non-global scope without its required context ID must fail closed.
+- Kernel origin is allowed by ACL checks.
+- The authenticated UI origin may read a declared namespace; it may write only when the namespace has a non-empty write list.
+- For plugin and capability origins, an empty read list is open, while a non-empty read list must match the capability/plugin identity. Entries support `*` and a trailing `.*` prefix.
+- For plugin and capability writes, an empty write list denies access; a non-empty list must match the capability/plugin identity with the same wildcard forms.
+- Authorization runs before state, blob, index, or stream mutation. A denied write does not create backend data or a Store event.
+
+Store requirements declared by a Rev capability are checked before its executor is selected. A missing namespace or scope is therefore an invocation failure, not a reason to bypass policy.
+
+## Operator responsibilities
+
+Operators decide whether the Gateway is reachable, which API key is configured, which namespaces and scopes exist, which identities appear in ACLs, and which plugin, filesystem, network, and mutation permissions are granted. The public docs do not promise that a compatible capability can be created or that a private service is reachable in a particular deployment.
+
+Use [Guardrails](/docs/reference/guardrails) for the surrounding runtime checks and [Troubleshooting](/docs/reference/troubleshooting) for safe probes. Never put a real key in a URL, source file, issue, log, or screenshot.

@@ -1,0 +1,224 @@
+---
+title: Troubleshooting
+description: Symptom-first, credential-free probes for the docs site and AKR Gateway.
+---
+
+Use the smallest probe that separates a documentation problem from a runtime or policy problem. The runtime examples use the reserved placeholder `https://api.example.invalid`; replace it only in a local shell. Never put a real key in a command, URL, log, or issue.
+
+For the docs site, set `DOCS_BASE_URL="http://localhost:3000"` when a local production server is running. For the Gateway, set `AKR_BASE_URL="https://api.example.invalid"`.
+
+## 404 or blank docs route
+
+**Symptom:** A documentation URL returns 404, or the page shell is blank.
+
+**Likely cause:** The URL is not in the content source, the page is not listed in its `meta.json`, or the request went to the wrong service.
+
+**Probe:**
+
+```sh
+curl -i "$DOCS_BASE_URL/docs/introduction/start-here"
+curl -i "$DOCS_BASE_URL/docs/introduction/start-here.md"
+```
+
+**Safe fix:** Run `bun run build` and `bun run smoke`, then use a URL from `llms.txt` or the sidebar. Do not create a second route outside the shared docs source.
+
+**Escalation boundary:** If the generated page is still absent after a clean build, the repository content or route configuration needs an implementation fix.
+
+## Health is OK but a protected route is unavailable
+
+**Symptom:** `GET /health` succeeds, but a Rev, chat, event, or other runtime route cannot be reached.
+
+**Likely cause:** The Gateway has an API-key policy, the caller is using a browser `/api/...` path against the wrong service, or the Gateway itself is not the process serving the request.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+curl -i "$AKR_BASE_URL/rev/functions"
+```
+
+**Safe fix:** Compare the response service and route with the [API route index](/docs/reference/api-routes). Have the operator provide credentials through the approved channel; do not paste them into a probe.
+
+**Escalation boundary:** Network reachability, reverse-proxy routing, and key distribution belong to the operator.
+
+## Missing API key
+
+**Symptom:** A protected route returns `401` with an `error` object.
+
+**Likely cause:** `AKR_API_KEY` is configured and the request did not present the expected `x-api-key` or Bearer credential.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/rev/functions"
+```
+
+**Safe fix:** Verify the header name and route with the operator, then retry through the approved secret-handling path. The public discovery routes remain the safe first check.
+
+**Escalation boundary:** A client cannot recover a missing or incorrect key by changing the payload; the operator controls the configured value.
+
+## A tool is listed but not invocable
+
+**Symptom:** A name appears in `GET /tools`, but a direct call returns an error.
+
+**Likely cause:** Discovery and invocation cross different checks: visibility, Rev resolution, requirements, permissions, or executor health can still reject the call.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/tools"
+curl -i "$AKR_BASE_URL/rev/functions/TOOL_NAME"
+```
+
+**Safe fix:** Compare the exact name and schema from `/tools`, then inspect the Rev identity and active revision before changing arguments. Do not rename a tool to work around policy.
+
+**Escalation boundary:** Tool visibility, permissions, and capability resolution are runtime/operator concerns.
+
+## Missing Rev executor
+
+**Symptom:** A Rev function is visible, but invocation reports that its executor cannot start or is unavailable.
+
+**Likely cause:** The active revision has no usable implementation, its artifact is missing, or the configured executor is not available in this deployment.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/rev/functions/TOOL_NAME"
+```
+
+**Safe fix:** Check the reported `executor`, `status`, and `active_revision`, then ask the operator to validate the active revision and build. Do not create a second capability name.
+
+**Escalation boundary:** Builds, plugins, filesystem access, and network access are deployment responsibilities.
+
+## Missing `rev.invoke` prompt or schema
+
+**Symptom:** An LLM-backed Rev invocation reports a missing prompt or the call does not match the advertised input shape.
+
+**Likely cause:** For an `llm` executor, the current handler resolves a prompt from `args.prompt`, `args.input`, `args.text`, or a schema default at `input_schema.properties.prompt.default`. Other executors do not share that prompt rule.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/tools"
+```
+
+**Safe fix:** Send one of the prompt fields accepted by the current schema, or use the schema default. Do not invent a field that `/tools` does not advertise.
+
+**Escalation boundary:** If `/tools` and the capability schema disagree, stop changing payloads and have the operator reconcile the runtime registration.
+
+## Store ACL denial
+
+**Symptom:** A Store-backed capability fails with an ACL or scope error.
+
+**Likely cause:** The namespace is not configured, the inherited context lacks the scope ID, or the caller's capability/plugin identity is not allowed by the namespace ACL.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+```
+
+Use the returned error text from the failed operation, not a data dump, to distinguish `namespace ... is not configured`, `scope ... is not addressable`, and `acl denied`.
+
+**Safe fix:** Have the operator align the namespace policy, scope context, and allow-list. Do not bypass the check or copy data into an unrestricted namespace.
+
+**Escalation boundary:** Store policy and context propagation are owned by the runtime configuration and operator.
+
+## Plugin is dead or quarantined
+
+**Symptom:** A plugin-backed tool is absent, fails, or appears unhealthy.
+
+**Likely cause:** The process died, exceeded its failure threshold, or is in the manager's retry/quarantine window.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/health"
+curl -i "$AKR_BASE_URL/tools"
+```
+
+**Safe fix:** Stop repeated calls while the plugin is quarantined and use the health snapshot's `state`, `last_error`, and `quarantined_until` fields for the operator. Do not paste the error into a public log with credentials.
+
+**Escalation boundary:** Plugin lifecycle, process permissions, and restart policy are operator responsibilities.
+
+## Event stream has no frames
+
+**Symptom:** `GET /events/stream` stays open without `data:` frames, or closes after the stream timeout.
+
+**Likely cause:** No matching event was published, the prefix does not match an `event...` subject, NATS is unavailable, or the client is reading the wrong service.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/events/poll?since=0"
+curl -N -i "$AKR_BASE_URL/events/stream?prefix=event"
+```
+
+**Safe fix:** Compare the poll result with the prefix, remove an overly narrow prefix, and remember that the current stream ends after 120 seconds without an event. Do not dump the event buffer into a ticket.
+
+**Escalation boundary:** NATS connectivity and event publication are runtime/operator concerns.
+
+## Dispatch stays accepted or pending
+
+**Symptom:** A dispatch request remains `accepted`, or a status lookup remains `pending`.
+
+**Likely cause:** The Gateway publishes work asynchronously. The `POST /chat/dispatch` response does not contain a task ID, and the current source does not establish a direct task-ID handoff to the status route.
+
+**Probe:**
+
+```sh
+curl -i "$AKR_BASE_URL/chat/dispatch/TASK_ID"
+curl -i "$AKR_BASE_URL/tools"
+```
+
+**Safe fix:** Treat `202 {"ok":true,"status":"accepted"}` as queued, not complete. For a retrievable background result, use the native `agent.dispatch` and `agent.result` tools with the returned `session_id`; do not invent a task ID.
+
+**Escalation boundary:** NATS delivery, Agent progress, and persistence are operator/runtime concerns. The `GET /chat/dispatch/{taskId}` route itself is not a guaranteed handle for `POST /chat/dispatch` in the current source.
+
+## MCP returns 400, 403, or 405
+
+**Symptom:** An MCP request is rejected or the method is not supported.
+
+**Likely cause:** The Gateway `/mcp` route accepts `GET` and `POST`; a valid request needs the MCP JSON-RPC shape and the appropriate content type. The current Gateway handler does not establish a `403` response, so a 403 usually belongs to a proxy or operator policy.
+
+**Probe:**
+
+```sh
+curl -i -X POST "$AKR_BASE_URL/mcp" \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+For the documentation service, use its separate `/mcp` endpoint and the docs smoke check rather than the Gateway URL.
+
+**Safe fix:** Use `POST` for JSON-RPC calls, keep the payload valid, and check the service boundary. Do not treat a 403 as proof of a missing tool schema.
+
+**Escalation boundary:** Proxy method restrictions, access policy, and service routing belong to the operator.
+
+## Docs build or search fails
+
+**Symptom:** `bun run build` fails, a page is missing from `llms.txt`, or local search does not find a new page.
+
+**Likely cause:** Frontmatter, `meta.json`, an internal link, the shared source, or the generated build is inconsistent.
+
+**Probe:**
+
+```sh
+bun run typecheck
+bun run lint
+bun run build
+bun run smoke
+curl -i "$DOCS_BASE_URL/api/search?query=Rev"
+```
+
+**Safe fix:** Fix the content source or shared route, then rebuild; do not edit generated `build/`, `.react-router/`, or `.source/` output.
+
+**Escalation boundary:** If the source and generated representations disagree after a clean build, keep the issue in the documentation implementation work rather than adding a second index or search service.
+
+## Next
+
+- [Security and policy](/docs/reference/security)
+- [API routes](/docs/reference/api-routes)
+- [API first contact](/docs/reference/api-first-contact)
+- [Chat and sessions](/docs/runtime/chat)

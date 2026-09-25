@@ -58,6 +58,10 @@ curl -i 'http://localhost:3000/api/search?query=Rev'
 - `/docs/introduction/start-here` — the three onboarding paths.
 - `/docs/introduction/getting-started` — local quickstart and next steps.
 - `/docs/reference/api-first-contact` — safe runtime discovery and response semantics.
+- `/docs/runtime/chat` — OpenAI-compatible, session, dispatch, and SSE flows.
+- `/docs/reference/api-routes` — Gateway, browser-proxy, and documentation route index.
+- `/docs/reference/security` — API-key and Store policy boundary.
+- `/docs/reference/troubleshooting` — symptom-first safe probes.
 - `/docs/reference/glossary` — core runtime vocabulary.
 - `/docs/extending/create-a-capability` — create and invoke one capability.
 - `/docs/*` — HTML documentation with the six sidebar groups: Introduction, Architecture, Runtime, Extending, Reference, and Development. Start here is the first page in Introduction.
