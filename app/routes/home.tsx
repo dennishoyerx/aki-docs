@@ -96,7 +96,10 @@ export default function Home() {
         <section className="aki-section" aria-labelledby="aki-entry-title">
           <div className="aki-section__heading">
             <h2 id="aki-entry-title">Choose a first path</h2>
-            <p>Three concrete doors into the runtime, followed by the deeper map.</p>
+            <p>
+              Three concrete doors into the runtime, followed by the deeper map.
+              Prefer one trace? <Link to="/docs/runtime/end-to-end">Follow the end-to-end example</Link>.
+            </p>
           </div>
           <div className="aki-card-grid">
             {entryPoints.map((entry) => (

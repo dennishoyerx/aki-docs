@@ -1,6 +1,6 @@
 {
   "title": "Reference",
-  "description": "Routes, security, troubleshooting, capabilities, and safeguards.",
+  "description": "Routes, security, troubleshooting, capabilities, FAQ, and safeguards.",
   "defaultOpen": true,
   "pages": [
     "index",
@@ -8,6 +8,7 @@
     "api-routes",
     "security",
     "troubleshooting",
+    "faq",
     "capabilities",
     "glossary",
     "guardrails"

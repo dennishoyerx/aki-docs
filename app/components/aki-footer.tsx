@@ -12,6 +12,7 @@ export function AkiFooter() {
       <nav className="aki-footer__links" aria-label="Footer navigation">
         <Link to="/docs/introduction/start-here">Start here</Link>
         <Link to="/docs/reference/api-first-contact">API first contact</Link>
+        <Link to="/docs/reference/faq">FAQ</Link>
         <Link to="/health">Docs health</Link>
       </nav>
     </footer>

@@ -1,0 +1,116 @@
+---
+title: End-to-end example
+description: A source-aligned fixture trace from request through Agent, tool, event, and result.
+---
+
+This is a **runtime-specific fixture** for an AKR Gateway. It is not executed by this documentation site, and the capability name, IDs, timestamps, and content are samples. Use `https://api.example.invalid` as a placeholder and `x-api-key: [REDACTED]` instead of a real key.
+
+The trace follows one request through the current source boundaries:
+
+```text
+request → Agent chooses a tool → Rev resolves the capability → executor runs
+        → event/SSE frame → result
+```
+
+## Fixture request
+
+The OpenAI-compatible handler accepts a non-empty `messages` array, `model`, `stream`, and the Agent conversation field used by the streaming path:
+
+```sh
+export AKR_BASE_URL="https://api.example.invalid"
+curl -N -X POST "$AKR_BASE_URL/v1/chat/completions" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  -d '{"model":"agent","messages":[{"role":"user","content":"Run the sample greeting capability for Ada."}],"stream":true,"conversation_id":"fixture-session"}'
+```
+
+`agent` selects the Agent path in the current handler. The request does not prove that a particular tool will be selected; the next step is an explicit fixture assumption.
+
+## Fixture Agent and tool step
+
+For this fixture, assume the Agent chooses the source-defined `rev.invoke` tool for a sample Rev capability named `sample.greet`:
+
+```json
+{
+  "name": "rev.invoke",
+  "args": {
+    "name": "sample.greet",
+    "args": { "name": "Ada" }
+  }
+}
+```
+
+`sample.greet` is a sample name, not a claim about a live inventory. A real caller would discover the current tool schema with `GET /tools` and inspect the Rev identity with `GET /rev/functions/sample.greet`. Rev then resolves the selected revision and executor; the tool call does not create a second capability identity.
+
+## Fixture event and SSE frames
+
+The Agent chat stream can expose a tool step with the source-defined `aki_tool` fields. This is a sample frame, not a captured production event:
+
+```text
+data: {"id":"chatcmpl-fixture","object":"chat.completion.chunk","created":0,"model":"agent","aki_tool":{"name":"rev.invoke","status":"running","args":"{\"name\":\"sample.greet\",\"args\":{\"name\":\"Ada\"}}","duration_ms":0},"choices":[{"index":0,"delta":{},"finish_reason":null}]}
+```
+
+The Gateway event stream uses a separate envelope with `subject`, `data`, `timestamp`, and `ts_ms`. A fixture terminal event for the same sample turn looks like this:
+
+```text
+data: {"subject":"event.chat.done.fixture-session","data":{"content":"Hello, Ada"},"timestamp":0,"ts_ms":0}
+```
+
+The subject and values above are illustrative; the envelope fields and event delivery behavior come from the current Gateway handlers.
+
+## Fixture result
+
+The equivalent non-streaming result has the OpenAI-compatible shape used by the handler:
+
+```json
+{
+  "id": "chatcmpl-fixture",
+  "object": "chat.completion",
+  "created": 0,
+  "model": "agent",
+  "choices": [{
+    "index": 0,
+    "message": { "role": "assistant", "content": "Hello, Ada" },
+    "finish_reason": "stop"
+  }]
+}
+```
+
+For the streaming request, the terminal sequence is a stop chunk followed by the literal marker:
+
+```text
+data: {"id":"chatcmpl-fixture","object":"chat.completion.chunk","created":0,"model":"agent","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+data: [DONE]
+```
+
+A session-oriented stream uses source-defined frames such as `type: "tool"` and terminal `type: "done"` instead of the OpenAI `[DONE]` marker. See [Chat and sessions](/docs/runtime/chat) for that route family.
+
+## Fixture session and dispatch equivalent
+
+The asynchronous session flow starts with a non-empty `message`:
+
+```sh
+curl -i -X POST "$AKR_BASE_URL/chat/dispatch" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  -d '{"message":"Run the sample greeting capability for Ada.","session_id":"fixture-session"}'
+```
+
+The source-backed response is `202` with `{"ok":true,"status":"accepted"}`. The current POST response does not return a task ID, so `GET /chat/dispatch/{taskId}` is not a guaranteed completion handle for this request. For a background result with a real handle, the source-defined native tools are `agent.dispatch` followed by `agent.result` with the returned `session_id`.
+
+## Fixture safe failure
+
+A protected route without the configured key fails at the Gateway boundary before the Agent turn:
+
+```sh
+curl -i "$AKR_BASE_URL/rev/functions"
+```
+
+When `AKR_API_KEY` is configured, the current middleware returns HTTP `401` with an `error` object. No credential is included in this probe. See [Security and policy](/docs/reference/security) and [Troubleshooting](/docs/reference/troubleshooting) for the boundary and safe recovery.
+
+## Next
+
+- [API first contact](/docs/reference/api-first-contact)
+- [Chat and sessions](/docs/runtime/chat)
+- [Create and invoke a capability](/docs/extending/create-a-capability)
+- [API routes](/docs/reference/api-routes)

@@ -1,0 +1,57 @@
+---
+title: FAQ
+description: Short answers to recurring Aki documentation and runtime boundary questions.
+---
+
+These answers point to the canonical page for the full contract or probe. They are deliberately short; runtime behavior remains authoritative in the current Gateway and handlers.
+
+## Why does docs `/health` say OK while runtime calls fail?
+
+The documentation service and AKR Gateway are separate services. A docs health response does not start or authenticate the runtime. See [Security and policy](/docs/reference/security) and [API routes](/docs/reference/api-routes).
+
+## Why does a protected route return 401?
+
+When `AKR_API_KEY` is configured, protected routes require the configured key through `x-api-key` or Bearer authentication. The safe first probes are public discovery routes. See [Security and policy](/docs/reference/security) and [Missing API key](/docs/reference/troubleshooting#missing-api-key).
+
+## Is `/api/rev/functions` different from `/rev/functions`?
+
+Yes. `/api/...` is the browser proxy spelling; the proxy strips `/api` before forwarding to the Gateway. See [API routes](/docs/reference/api-routes#browser-proxy).
+
+## Why is a tool listed but not invocable?
+
+`GET /tools` is discovery, not a guarantee that every invocation path is available. Rev resolution, requirements, permissions, schema, and executor health are separate checks. See [A tool is listed but not invocable](/docs/reference/troubleshooting#a-tool-is-listed-but-not-invocable).
+
+## Why does an event stream show no frames?
+
+There may be no matching event, the prefix may be too narrow, NATS may be unavailable, or the request may target the wrong service. The current stream also ends after 120 seconds without an event. See [Event stream has no frames](/docs/reference/troubleshooting#event-stream-has-no-frames) and [Events](/docs/runtime/events).
+
+## Why does dispatch remain accepted or pending?
+
+`202 accepted` means the Gateway published work; it is not a result. The current `POST /chat/dispatch` response does not supply a task ID, so use the session stream or the native `agent.dispatch`/`agent.result` handle flow. See [Dispatch stays accepted or pending](/docs/reference/troubleshooting#dispatch-stays-accepted-or-pending) and [Chat and sessions](/docs/runtime/chat).
+
+## Why was a Store operation denied?
+
+The namespace, inherited scope, origin, or ACL may not satisfy the Store policy. Unknown namespaces and unaddressable non-global scopes fail closed. See [Store ACL denial](/docs/reference/troubleshooting#store-acl-denial) and [Security and policy](/docs/reference/security).
+
+## Why does Rev invocation report an executor or prompt problem?
+
+Inspect the capability's active revision and executor first. For an `llm` executor, the current handler resolves a prompt from `args.prompt`, `args.input`, `args.text`, or the schema default. See [Missing Rev executor](/docs/reference/troubleshooting#missing-rev-executor) and [Missing `rev.invoke` prompt or schema](/docs/reference/troubleshooting#missing-revinvoke-prompt-or-schema).
+
+## How do I check a plugin failure safely?
+
+Use public `/health` and `/tools` to inspect plugin state and the current tool surface. The health snapshot includes failure and quarantine fields; lifecycle recovery remains operator-owned. See [Plugin is dead or quarantined](/docs/reference/troubleshooting#plugin-is-dead-or-quarantined).
+
+## Which `/mcp` endpoint should I use?
+
+The documentation `/mcp` exposes `list_pages`, `get_page`, and `search` for these docs. The AKR Gateway `/mcp` is a different, protected JSON-RPC/SSE service. See [API routes](/docs/reference/api-routes#documentation-surfaces) and [MCP returns 400, 403, or 405](/docs/reference/troubleshooting#mcp-returns-400-403-or-405).
+
+## Why did a docs build or search check fail?
+
+Check frontmatter, `meta.json`, internal links, the shared source, and the generated build together. Do not edit generated output or add a second search index. See [Docs build or search fails](/docs/reference/troubleshooting#docs-build-or-search-fails) and [Content workflow](/docs/development/content-workflow).
+
+## Next
+
+- [Start here](/docs/introduction/start-here)
+- [End-to-end example](/docs/runtime/end-to-end)
+- [Troubleshooting](/docs/reference/troubleshooting)
+- [API routes](/docs/reference/api-routes)

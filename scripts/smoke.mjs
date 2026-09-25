@@ -12,6 +12,7 @@ const requiredFiles = [
   'content/docs/introduction/getting-started.mdx',
   'content/docs/architecture/index.mdx',
   'content/docs/runtime/index.mdx',
+  'content/docs/runtime/end-to-end.mdx',
   'content/docs/extending/index.mdx',
   'content/docs/extending/create-a-capability.mdx',
   'content/docs/reference/index.mdx',
@@ -19,6 +20,7 @@ const requiredFiles = [
   'content/docs/reference/api-routes.mdx',
   'content/docs/reference/security.mdx',
   'content/docs/reference/troubleshooting.mdx',
+  'content/docs/reference/faq.mdx',
   'content/docs/reference/glossary.mdx',
   'content/docs/development/index.mdx',
   'app/routes/mcp.ts',
@@ -83,12 +85,15 @@ const extendingMeta = JSON.parse(
   await readFile(join(root, 'content/docs/extending/meta.json'), 'utf8'),
 );
 assert.ok(extendingMeta.pages.includes('create-a-capability'));
+const runtimeMeta = JSON.parse(await readFile(join(root, 'content/docs/runtime/meta.json'), 'utf8'));
+assert.ok(runtimeMeta.pages.includes('end-to-end'));
 const referenceMeta = JSON.parse(
   await readFile(join(root, 'content/docs/reference/meta.json'), 'utf8'),
 );
 assert.ok(referenceMeta.pages.includes('api-first-contact'));
 assert.ok(referenceMeta.pages.includes('security'));
 assert.ok(referenceMeta.pages.includes('troubleshooting'));
+assert.ok(referenceMeta.pages.includes('faq'));
 assert.ok(referenceMeta.pages.includes('glossary'));
 
 const publicPages = [
@@ -143,6 +148,12 @@ const publicPages = [
     requiredText: ['chat.completion', 'SSE', 'pending', 'completed', '[DONE]'],
   },
   {
+    file: 'content/docs/runtime/end-to-end.mdx',
+    route: '/docs/runtime/end-to-end',
+    title: 'End-to-end example',
+    requiredText: ['Fixture request', 'rev.invoke', 'aki_tool', '[DONE]', 'Fixture safe failure'],
+  },
+  {
     file: 'content/docs/reference/api-routes.mdx',
     route: '/docs/reference/api-routes',
     title: 'API routes',
@@ -159,6 +170,12 @@ const publicPages = [
     route: '/docs/reference/troubleshooting',
     title: 'Troubleshooting',
     requiredText: ['404 or blank docs route', 'MCP returns 400, 403, or 405', 'bun run smoke'],
+  },
+  {
+    file: 'content/docs/reference/faq.mdx',
+    route: '/docs/reference/faq',
+    title: 'FAQ',
+    requiredText: ['docs `/health`', '401', 'MCP', 'search'],
   },
 ];
 
@@ -214,11 +231,13 @@ if (baseUrl) {
     '/docs/reference/security',
     '/docs/reference/troubleshooting',
     '/docs/reference/api-routes',
+    '/docs/runtime/end-to-end',
+    '/docs/reference/faq',
   ]) {
     assert.ok(llmsIndex.includes(route), `llms.txt is missing ${route}`);
   }
   const llmsFull = await (await fetchEndpoint('/llms-full.txt', 'text/plain')).text();
-  for (const title of ['Start here', 'Chat and sessions', 'Security and policy', 'Troubleshooting']) {
+  for (const title of ['Start here', 'Chat and sessions', 'End-to-end example', 'Security and policy', 'Troubleshooting', 'FAQ']) {
     assert.ok(llmsFull.includes(`# ${title}`), `llms-full.txt is missing ${title}`);
   }
 
@@ -252,6 +271,18 @@ if (baseUrl) {
   assert.ok(
     troubleshootingSearch.some((result) => result.url === '/docs/reference/troubleshooting'),
     'local search did not return the troubleshooting page',
+  );
+  const endToEndSearch = await (
+    await fetchEndpoint('/api/search?query=end-to-end', 'application/json')
+  ).json();
+  assert.ok(
+    endToEndSearch.some((result) => result.url === '/docs/runtime/end-to-end'),
+    'local search did not return the end-to-end page',
+  );
+  const faqSearch = await (await fetchEndpoint('/api/search?query=FAQ', 'application/json')).json();
+  assert.ok(
+    faqSearch.some((result) => result.url === '/docs/reference/faq'),
+    'local search did not return the FAQ page',
   );
 
   const mcpRequest = async (id, method, params) => {
@@ -289,7 +320,13 @@ if (baseUrl) {
     arguments: {},
   });
   const pageListText = pageList.result.content[0].text;
-  for (const route of ['/docs/runtime/chat', '/docs/reference/security', '/docs/reference/troubleshooting']) {
+  for (const route of [
+    '/docs/runtime/chat',
+    '/docs/runtime/end-to-end',
+    '/docs/reference/security',
+    '/docs/reference/troubleshooting',
+    '/docs/reference/faq',
+  ]) {
     assert.ok(pageListText.includes(route), `MCP list_pages is missing ${route}`);
   }
 
@@ -307,13 +344,26 @@ if (baseUrl) {
   const securityResults = JSON.parse(mcpSecuritySearch.result.content[0].text);
   assert.ok(securityResults.some((result) => result.url === '/docs/reference/security'));
 
-  const fetched = await mcpRequest(6, 'tools/call', {
+  const mcpFaqSearch = await mcpRequest(6, 'tools/call', {
+    name: 'search',
+    arguments: { query: 'FAQ' },
+  });
+  const faqResults = JSON.parse(mcpFaqSearch.result.content[0].text);
+  assert.ok(faqResults.some((result) => result.url === '/docs/reference/faq'));
+
+  const fetched = await mcpRequest(7, 'tools/call', {
     name: 'get_page',
     arguments: { url: '/docs/introduction/start-here' },
   });
   assert.match(fetched.result.content[0].text, /Start here/);
 
-  const securityPage = await mcpRequest(7, 'tools/call', {
+  const endToEndPage = await mcpRequest(8, 'tools/call', {
+    name: 'get_page',
+    arguments: { url: '/docs/runtime/end-to-end' },
+  });
+  assert.match(endToEndPage.result.content[0].text, /End-to-end example/);
+
+  const securityPage = await mcpRequest(9, 'tools/call', {
     name: 'get_page',
     arguments: { url: '/docs/reference/security' },
   });
