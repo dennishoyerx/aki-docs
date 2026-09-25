@@ -51,6 +51,9 @@ For `stream: true`, the handler returns SSE chunks with `object: "chat.completio
 | `GET /chat/sessions/{id}` | Read one session. |
 | `GET /chat/sessions/{id}/messages` | Read messages; optional `limit`, `before`, and `channel` query parameters. |
 | `POST /chat/sessions/{id}/messages` | Create a message; the handler forwards optional `role`, `content`, and `timestamp` fields. |
+| `GET /chat/external/sessions` | List supported external sessions. |
+| `GET /chat/external/messages` | Read messages from an external session. |
+| `POST /chat/external/send` | Send text to an external session; success is `202`. |
 | `GET /chat/stream/{sessionId}` | Stream session events as SSE. |
 | `POST /chat/cancel/{sessionId}` | Publish cancellation; success is `200` with `status: "cancelling"`. |
 | `GET /chat/users/identify` | Resolve a user from `channel` and `external_id` query parameters. |

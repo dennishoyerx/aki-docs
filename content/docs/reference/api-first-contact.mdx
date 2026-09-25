@@ -68,6 +68,9 @@ Use the session routes when a conversation, history, or channel stream matters m
 | `GET /chat/sessions/{id}` | Session ID in the path | `200` with `session` |
 | `GET /chat/sessions/{id}/messages` | Optional `limit`, `before`, and `channel` query parameters | `200` with `messages` |
 | `POST /chat/sessions/{id}/messages` | Optional `role`, `content`, and `timestamp` fields | `201` with `message` |
+| `GET /chat/external/sessions` | Optional `source` and `limit` query parameters | `200` with `sessions` |
+| `GET /chat/external/messages` | `source`, `id`, and optional `limit` query parameters | `200` with `messages` |
+| `POST /chat/external/send` | Required `source`, `id`, and `text` fields | `202` with `result` |
 | `GET /chat/stream/{sessionId}` | Session ID in the path | SSE `data:` frames |
 | `POST /chat/cancel/{sessionId}` | Session ID in the path | `200` with `status: "cancelling"` |
 

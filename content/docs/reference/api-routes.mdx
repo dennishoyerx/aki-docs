@@ -31,6 +31,9 @@ When `AKR_API_KEY` is configured, the remaining Gateway routes are protected. Th
 | `GET /chat/sessions/{id}` | Read one session. |
 | `GET /chat/sessions/{id}/messages` | Read session history. |
 | `POST /chat/sessions/{id}/messages` | Create a session message. |
+| `GET /chat/external/sessions` | List supported external sessions. |
+| `GET /chat/external/messages` | Read messages from an external session. |
+| `POST /chat/external/send` | Send text to an external session; success is `202`. |
 | `GET /chat/stream/{sessionId}` | Stream session events as SSE. |
 | `POST /chat/dispatch` | Queue an asynchronous Agent turn. |
 | `GET /chat/dispatch/{taskId}` | Return `pending` or `completed` for a task ID present in the status map. |
@@ -78,6 +81,9 @@ Both routes are protected when the Gateway key is enabled. If NATS is unavailabl
 | `GET /chat/sessions/{id}` | Read a session. |
 | `GET /chat/sessions/{id}/messages` | Read messages with optional `limit`, `before`, and `channel`. |
 | `POST /chat/sessions/{id}/messages` | Create a message from optional `role`, `content`, and `timestamp`. |
+| `GET /chat/external/sessions` | List supported external sessions. |
+| `GET /chat/external/messages` | Read external-session messages. |
+| `POST /chat/external/send` | Send text to an external session; success is `202`. |
 | `GET /chat/stream/{sessionId}` | SSE token, reasoning, tool, notice, and terminal `done` frames. |
 | `POST /chat/dispatch` | Protected asynchronous dispatch; `202` means accepted. |
 | `GET /chat/dispatch/{taskId}` | `200` with `pending` or `completed`; the current POST response does not supply a task ID. |
