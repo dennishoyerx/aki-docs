@@ -12,19 +12,26 @@ request → Agent decides → Rev resolves → executor runs → result
 
 ## Start locally
 
+Install dependencies and start the docs server:
+
 ```bash
 bun install
 bun run dev
+```
+
+`bun run dev` stays running; open the URL it prints (for example, `http://localhost:5173/`). The search dialog and `/api/search` route use a local Fumadocs full-text index built from `content/docs`. The docs service's `/health` route does not start the AKR runtime.
+
+## Checks
+
+With the dev server still running, use another terminal:
+
+```bash
 bun run typecheck
 bun run build
 bun run smoke
 ```
 
-Open the URL printed by the React Router development server. The search dialog and the `/api/search` route use a local Fumadocs full-text index built from `content/docs`. The docs service's `/health` route does not start the AKR runtime.
-
-## Verify
-
-Run the linter alongside the quickstart checks:
+Run the linter as well:
 
 ```bash
 bun run lint

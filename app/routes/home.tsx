@@ -97,7 +97,7 @@ export default function Home() {
           <div className="aki-section__heading">
             <h2 id="aki-entry-title">Choose a first path</h2>
             <p>
-              Three concrete doors into the runtime, followed by the deeper map.
+              Three primary paths, followed by three reference shortcuts.
               Prefer one trace? <Link to="/docs/runtime/end-to-end">Follow the end-to-end example</Link>.
               Starting the product? <Link to="/docs/introduction/run-aki">Run Aki separately</Link>.
             </p>

@@ -1,6 +1,7 @@
 import type { Route } from './+types/docs';
 import { use } from 'react';
 import { isMarkdownPreferred } from 'fumadocs-core/negotiation';
+import { findNeighbour, type Root } from 'fumadocs-core/page-tree';
 import { useFumadocsLoader } from 'fumadocs-core/source/client';
 import {
   DocsBody,
@@ -68,21 +69,30 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 function Content({
   path,
+  pageTree,
   markdownUrl,
   imagePath,
 }: {
   path: string;
+  pageTree: Root;
   markdownUrl: string;
   imagePath: string;
 }) {
   const page = docs.getPage(path);
   if (!page) throw new Error(`unknown page: ${path}`);
 
+  const pageUrl = `/docs/${path.replace(/\.mdx$/, '').replace(/\/index$/, '')}`;
+  const neighbours = findNeighbour(pageTree, pageUrl);
   const { toc } = use(page.load());
   const Mdx = page.body;
 
   return (
-    <DocsPage toc={toc} className="aki-docs-container">
+    <DocsPage
+      toc={toc}
+      className="aki-docs-container"
+      breadcrumb={{ includeRoot: { url: '/' }, includePage: true }}
+      footer={{ items: neighbours }}
+    >
       <title>{page.title}</title>
       <meta name="description" content={page.description} />
       <meta property="og:image" content={imagePath} />
@@ -108,7 +118,12 @@ export default function Page({ loaderData }: Route.ComponentProps) {
       sidebar={{ footer: <AkiFooter /> }}
       containerProps={{ className: 'aki-docs-container' }}
     >
-      <Content path={path} markdownUrl={markdownUrl} imagePath={imagePath} />
+      <Content
+        path={path}
+        pageTree={pageTree}
+        markdownUrl={markdownUrl}
+        imagePath={imagePath}
+      />
     </DocsLayout>
   );
 }

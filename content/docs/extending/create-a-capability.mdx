@@ -37,7 +37,22 @@ Send this payload to the `rev.create` tool. It describes a small Bun-backed tool
 
 Rev records the capability and its first revision, then the configured executor validates or builds it. A policy denial or build error is a normal failure; it is not a reason to create a second identity.
 
-## 3. Invoke it
+## 3. Invoke through Gateway MCP
+
+The AKR Gateway `/mcp` route is a JSON-RPC transport, separate from the direct Rev route below. Its `tools/call` parameters use `name` and `arguments`; the current `rev.create` schema requires `name` and `description` and accepts the optional executor/schema/source fields shown here:
+
+```sh
+curl -i -X POST "$AKR_BASE_URL/mcp" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  --data @- <<'JSON'
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"rev.create","arguments":{"name":"hello.greet","description":"Greet a person by name","kind":"tool","executor":"bun-plugin","input_schema":{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]},"source":"export default async function handler(args: any) { return { greeting: 'Hello, ' + args.name }; }"}}}
+JSON
+```
+
+The Gateway MCP handler returns the tool result as JSON-RPC content; it is not the direct `POST /rev/functions/.../invoke` response. See [API routes](/docs/reference/api-routes), [Rev](/docs/runtime/rev), and [MCP troubleshooting](/docs/reference/troubleshooting#mcp-returns-400-403-or-405).
+
+## 4. Invoke it directly
 
 Once the capability is active, the public Kernel route accepts arguments under `args`:
 
@@ -53,7 +68,7 @@ A successful response has `ok: true`, the capability `name`, and a `result`. A f
 
 Browser clients may use the proxy spelling `/api/rev/functions/hello.greet/invoke`, which maps to the Kernel route without `/api`.
 
-## 4. Change it safely
+## 5. Change it safely
 
 Use `rev.edit` or the Rev revision route to create a new revision, inspect it, and select it deliberately. Read [Rev](/docs/runtime/rev) for identity and selection, and [Guardrails](/docs/reference/guardrails) for the checks around invocation.
 

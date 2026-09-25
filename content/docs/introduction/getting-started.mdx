@@ -7,17 +7,32 @@ Aki docs is a small Fumadocs React Router site built with Vite, Bun, and TypeScr
 
 ## Start the docs locally
 
-Run this exact quickstart. Keep `bun run dev` running while you use the local site, and run the checks from another terminal when needed.
+Install dependencies and start the development server:
 
 ```bash
 bun install
 bun run dev
+```
+
+`bun run dev` stays running while you browse the docs. A typical startup shape is:
+
+```text
+$ bun run dev
+...
+Local: http://localhost:5173/
+```
+
+Use the URL printed by the dev server; the port can vary. Search uses a local index built from `content/docs`; it does not call a hosted search service.
+
+## Run the checks
+
+Leave the dev server running and use a second terminal for the checks:
+
+```bash
 bun run typecheck
 bun run build
 bun run smoke
 ```
-
-Open the URL printed by the development server. Search uses a local index built from `content/docs`; it does not call a hosted search service.
 
 For a production-style local check, build first, then run `PORT=3000 bun run start` in another terminal and request the docs site's health route:
 

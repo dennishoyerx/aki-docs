@@ -19,24 +19,26 @@ This starts the product services described by the public `compose.yml`. It is se
 
 ## Verify the local Gateway
 
-The Gateway health and tool discovery routes are the safest first checks. These are local-only probes for a product checkout:
+The Compose file publishes no host ports. The Gateway binds inside the `akr` container, so run the health and tool probes from that container rather than assuming a host-local port:
 
 ```sh
-curl -i http://localhost:18768/health
-curl -i http://localhost:18768/tools
+docker compose exec akr curl http://127.0.0.1:18768/health
+docker compose exec akr curl http://127.0.0.1:18768/tools
 ```
 
-`/health` reports the AKR service snapshot, including plugin, Store, MCP, and event-storm summaries. `/tools` reports the currently exposed tool sets and schemas. Both routes are public at the Gateway boundary; other routes may require the operator-configured API key. See [API first contact](/docs/reference/api-first-contact) and [Security and policy](/docs/reference/security).
+`/health` reports the AKR service snapshot, including plugin, Store, MCP, and event-storm summaries. `/tools` reports the currently exposed tool sets and schemas. Both routes are public at the Gateway boundary; other routes may require the operator-configured API key. Browser access is through the operator-configured Traefik route, not a host port. See [API first contact](/docs/reference/api-first-contact) and [Security and policy](/docs/reference/security).
 
-Open the web app through the local address published by the `aki` service. The documentation site's own `/health` and `/mcp` routes belong to `aki-docs` and are not product health checks.
+Open the web app through the operator-configured route for the `aki` service. The documentation site's own `/health` and `/mcp` routes belong to `aki-docs` and are not product health checks.
 
 ## Stop the product
+
+For a local checkout that you own, stop the services with:
 
 ```sh
 docker compose down
 ```
 
-Stopping the product does not change the docs-only commands. For a complete public documentation check, return to [Getting started](/docs/introduction/getting-started).
+Do not run `docker compose down` in a shared or live deployment; ask the operator to manage that environment. Stopping the product does not change the docs-only commands. For a complete public documentation check, return to [Getting started](/docs/introduction/getting-started).
 
 ## Next
 

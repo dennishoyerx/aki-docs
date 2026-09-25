@@ -68,6 +68,12 @@ const routeConfig = await readFile(join(root, 'app/routes.ts'), 'utf8');
 for (const route of ['health', 'mcp', 'api/search', 'llms.txt', 'llms-full.txt', 'llms.mdx/docs']) {
   assert.ok(routeConfig.includes(route), `missing route: ${route}`);
 }
+const docsRouteConfig = await readFile(join(root, 'app/routes/docs.tsx'), 'utf8');
+for (const primitive of ['findNeighbour', 'includeRoot', 'includePage', 'footer={{ items: neighbours }}']) {
+  assert.ok(docsRouteConfig.includes(primitive), `docs navigation is missing ${primitive}`);
+}
+const homeConfig = await readFile(join(root, 'app/routes/home.tsx'), 'utf8');
+assert.ok(homeConfig.includes('Three primary paths'), 'homepage does not distinguish primary paths');
 
 const docsMeta = JSON.parse(await readFile(join(root, 'content/docs/meta.json'), 'utf8'));
 assert.deepEqual(docsMeta.pages, [
@@ -110,13 +116,28 @@ const publicPages = [
     file: 'content/docs/introduction/getting-started.mdx',
     route: '/docs/introduction/getting-started',
     title: 'Getting started',
-    requiredText: ['bun install', 'bun run dev', 'bun run typecheck', 'bun run build', 'bun run smoke'],
+    requiredText: [
+      '## Start the docs locally',
+      '## Run the checks',
+      'bun install',
+      'bun run dev',
+      'Local: http://localhost:5173/',
+      'bun run typecheck',
+      'bun run build',
+      'bun run smoke',
+    ],
   },
   {
     file: 'content/docs/introduction/run-aki.mdx',
     route: '/docs/introduction/run-aki',
     title: 'Run Aki',
-    requiredText: ['docker compose up --build', 'localhost:18768/health', 'bun run smoke'],
+    requiredText: ['docker compose up --build', 'docker compose exec akr curl http://127.0.0.1:18768/health', 'bun run smoke'],
+  },
+  {
+    file: 'content/docs/introduction/index.mdx',
+    route: '/docs/introduction',
+    title: 'Aki in one minute',
+    requiredText: ['Aki is a capability runtime'],
   },
   {
     file: 'content/docs/reference/api-first-contact.mdx',
@@ -148,7 +169,12 @@ const publicPages = [
     file: 'content/docs/extending/create-a-capability.mdx',
     route: '/docs/extending/create-a-capability',
     title: 'Create and invoke a capability',
-    requiredText: ['rev.create', 'rev.invoke', '/rev/functions/hello.greet/invoke'],
+    requiredText: [
+      'rev.create',
+      'rev.invoke',
+      '"method":"tools/call"',
+      '/rev/functions/hello.greet/invoke',
+    ],
   },
   {
     file: 'content/docs/runtime/chat.mdx',
