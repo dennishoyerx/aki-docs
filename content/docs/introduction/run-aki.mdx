@@ -5,17 +5,43 @@ description: Start the Aki product locally from its public Compose surface and v
 
 This page is about the **Aki product**, not this documentation site. The product Compose file defines separate `akr` (Kernel/Gateway) and `aki` (web app) services, and the web app depends on the Gateway. The docs repository's `bun run ...` commands build or verify documentation only; they do not start AKR.
 
+Choose the mode before running commands: **development Compose** gives you a mutable local loop; the **production release transaction** promotes immutable, SHA-identified images and is the only path that should be described as a release.
+
 ## Before starting
 
 Run these commands from an Aki product checkout with its normal Compose prerequisites prepared by the operator. The public Compose file expects an environment file and operator-provided networks/volumes; this page does not reproduce their values or deployment details.
 
-## Start the product
+## Development start
+
+For a local development loop, use the development overlay together with the base Compose file:
 
 ```sh
-docker compose up --build
+export AKI_DEPLOY_SHA="$(git rev-parse HEAD)"
+docker compose -f compose.yml -f compose.dev.yml up --build
 ```
 
-This starts the product services described by the public `compose.yml`. It is separate from the docs-only `bun run smoke` check, which validates content, HTML, Markdown, search, and documentation MCP surfaces without starting a runtime.
+The development overlay deliberately keeps source/plugin mounts and development image names. It is convenient, mutable, and not an evidence-backed production release. The SHA variable is only a Compose interpolation requirement; the release rules below still require a clean, immutable release path.
+
+## Production release
+
+From a clean Aki checkout, use the product repository's deployment interface:
+
+```sh
+SOURCE_SHA="$(git rev-parse HEAD)"
+AKI_DEPLOY_SHA="$SOURCE_SHA" ./scripts/deploy.sh plan kernel
+AKI_DEPLOY_SHA="$SOURCE_SHA" ./scripts/deploy.sh apply kernel
+AKI_DEPLOY_SHA="$SOURCE_SHA" ./scripts/deploy.sh verify kernel
+```
+
+Replace `kernel` with `web` for the other service scope, or use `all` for one combined transaction. `plan` is read-only. `apply` builds a candidate, captures the previous image, promotes the exact service scope, runs the evidence gates, and rolls back on failure. `verify` compares the running image ID and artifact with the candidate.
+
+For a manual recovery, use the recorded release transaction:
+
+```sh
+./scripts/deploy.sh rollback "reason"
+```
+
+The rollback reuses the previously captured image ID; it does not rebuild from `latest`. The full invariant, gate, and rollback contract is documented under [Deployment strategy](/docs/reference/deployment). The bare `bun run smoke` checks source and content contracts; after starting the built docs server, the full public-surface check additionally uses `BASE_URL=http://localhost:3000 bun run smoke` to validate HTML, Markdown, search, and documentation MCP without starting AKR.
 
 ## Verify the local Gateway
 
@@ -32,13 +58,13 @@ Open the web app through the operator-configured route for the `aki` service. Th
 
 ## Stop the product
 
-For a local checkout that you own, stop the services with:
+For a local checkout that you own, stop the development services with:
 
 ```sh
-docker compose down
+docker compose -f compose.yml -f compose.dev.yml down
 ```
 
-Do not run `docker compose down` in a shared or live deployment; ask the operator to manage that environment. Stopping the product does not change the docs-only commands. For a complete public documentation check, return to [Getting started](/docs/introduction/getting-started).
+Do not run `docker compose down` in a shared or live deployment; ask the operator to manage that environment. Production rollback belongs to `deploy.sh rollback`, not to an ad hoc Compose teardown. For a complete public documentation check, return to [Getting started](/docs/introduction/getting-started).
 
 ## Next
 
@@ -46,3 +72,4 @@ Do not run `docker compose down` in a shared or live deployment; ask the operato
 - [Chat and sessions](/docs/runtime/chat)
 - [End-to-end example](/docs/runtime/end-to-end)
 - [FAQ](/docs/reference/faq)
+- [Deployment strategy](/docs/reference/deployment)

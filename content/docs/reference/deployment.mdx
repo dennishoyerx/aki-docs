@@ -1,0 +1,67 @@
+---
+title: Deployment strategy
+description: Immutable production releases, transactional promotion, verification gates, and rollback.
+---
+
+Aki production deployment is a release transaction, not a mutable `latest` image plus a hopeful restart. A candidate is built from one clean source commit, verified, promoted by an exact image reference, checked against the running artifact, and recorded in a manifest. A failed gate restores the previously captured image before the transaction is marked failed.
+
+This page documents the public release contract. Operator-specific hosts, credentials, environment files, private networks, and live instance counts are deliberately not part of the public documentation.
+
+## The release identity
+
+The source commit is the release identity. The transaction accepts only a full 40- or 64-character hexadecimal Git SHA and uses it as the image tag:
+
+```text
+source commit S -> candidate akr:S or aki:S
+                 -> exact image ID check
+                 -> service recreation
+                 -> live artifact verification
+```
+
+The runtime image carries the same SHA in its `org.opencontainers.image.revision` label. Production Compose defaults to an immutable tag and requires the full SHA; mutable development tags stay in the development overlay. A successful Docker build alone is not a release.
+
+## Transaction phases
+
+```text
+lock -> capture previous state -> build candidate -> validate candidate
+     -> promote only the target service -> run health/smoke/storm gates
+     -> compare live image ID and artifact -> commit manifest/state
+```
+
+An operator should use the public deployment interface instead of assembling `docker build`, `docker cp`, restart, and sleep commands manually. The exact command names and gates are provided by the Aki product checkout that owns the deploy scripts.
+
+The transaction rejects a dirty source worktree and a second concurrent deploy. Before mutation it records the previous image references, IDs, container IDs, health codes, and source/runtime roots. The evidence record is written atomically and must belong to the same transaction, timestamp, roots, and commit.
+
+## Promotion is service-scoped
+
+Kernel and web releases are separate targets. The transaction builds and promotes only the selected service; unrelated databases, browsers, and documentation services are not recreated. `kernel` and `web` name the two service scopes; the `all` target is a combined transaction that performs both scopes. The Compose service/container names remain `akr` and `aki`. Keeping target and container vocabularies separate prevents a kernel verification from accidentally taking the web asset path.
+
+A kernel candidate must contain the built `aki-core` and every required native plugin binary. TypeScript plugins must be compiled to their `dist` bundles before they are copied into the runtime image. A missing required artifact fails the image build; the release is not allowed to start with a partially shipped plugin set.
+
+## Verification gates
+
+A successful kernel release requires all four evidence gates to be `passed`:
+
+- **compile:** the candidate image exists, its revision label matches the source SHA, and its required artifacts are present;
+- **health:** the promoted service reaches its health endpoint;
+- **smoke:** the real runtime smoke flow completes, including the Agent turn and terminal SSE done frame;
+- **storm:** the health snapshot reports no event-storm suppression failure after the observation window.
+
+The manifest records every gate as `passed`, `failed`, or `not-run`. Partial or mismatched gate evidence cannot be written as a successful transaction. The release is evidence-backed: a green Docker build, a green health response, or a wrapper's `success` text alone is not enough.
+
+## Failure and rollback
+
+Promotion, health, smoke, storm, and final artifact verification failures trigger restoration of the image captured before the transaction. Rollback reuses the recorded image ID; it does not rebuild from a moving tag and does not guess from `latest`. If the previous image is unavailable, the operation fails closed and the operator must restore an explicitly identified known-good image.
+
+After any failed release, inspect the manifest and the transaction log before retrying. Do not manually retag or recreate a service to make a failed transaction appear successful. The next attempt must start from a clean source commit and a new transaction.
+
+## What remains an operator concern
+
+The public contract does not prescribe private DNS, Traefik host rules, API keys, storage backups, image retention, registry policy, or release scheduling. Those choices remain operator policy. The transaction protects artifact identity and service state; it does not make a private environment reproducible or publicly reachable.
+
+## Related pages
+
+- [Run Aki](/docs/introduction/run-aki) — start the product and probe its public health boundary.
+- [API routes](/docs/reference/api-routes) — distinguish Gateway, browser proxy, and docs routes.
+- [Troubleshooting](/docs/reference/troubleshooting) — handle health, plugin, smoke, and stream failures.
+- [Content workflow](/docs/development/content-workflow) — verify every public docs representation after a page change.

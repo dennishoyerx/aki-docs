@@ -20,6 +20,7 @@ const requiredFiles = [
   'content/docs/reference/index.mdx',
   'content/docs/reference/api-first-contact.mdx',
   'content/docs/reference/api-routes.mdx',
+  'content/docs/reference/deployment.mdx',
   'content/docs/reference/security.mdx',
   'content/docs/reference/troubleshooting.mdx',
   'content/docs/reference/faq.mdx',
@@ -100,6 +101,7 @@ const referenceMeta = JSON.parse(
   await readFile(join(root, 'content/docs/reference/meta.json'), 'utf8'),
 );
 assert.ok(referenceMeta.pages.includes('api-first-contact'));
+assert.ok(referenceMeta.pages.includes('deployment'));
 assert.ok(referenceMeta.pages.includes('security'));
 assert.ok(referenceMeta.pages.includes('troubleshooting'));
 assert.ok(referenceMeta.pages.includes('faq'));
@@ -131,7 +133,16 @@ const publicPages = [
     file: 'content/docs/introduction/run-aki.mdx',
     route: '/docs/introduction/run-aki',
     title: 'Run Aki',
-    requiredText: ['docker compose up --build', 'docker compose exec akr curl http://127.0.0.1:18768/health', 'bun run smoke'],
+    requiredText: [
+      'export AKI_DEPLOY_SHA="$(git rev-parse HEAD)"',
+      'docker compose -f compose.yml -f compose.dev.yml up --build',
+      './scripts/deploy.sh plan kernel',
+      './scripts/deploy.sh apply kernel',
+      './scripts/deploy.sh verify kernel',
+      './scripts/deploy.sh rollback "reason"',
+      'docker compose exec akr curl http://127.0.0.1:18768/health',
+      'BASE_URL=http://localhost:3000 bun run smoke',
+    ],
   },
   {
     file: 'content/docs/introduction/index.mdx',
@@ -193,6 +204,12 @@ const publicPages = [
     route: '/docs/reference/api-routes',
     title: 'API routes',
     requiredText: ['AKR Gateway public discovery', 'browser proxy', 'documentation MCP'],
+  },
+  {
+    file: 'content/docs/reference/deployment.mdx',
+    route: '/docs/reference/deployment',
+    title: 'Deployment strategy',
+    requiredText: ['immutable', 'candidate', 'compile:', 'health:', 'smoke:', 'storm:', 'rollback', 'org.opencontainers.image.revision'],
   },
   {
     file: 'content/docs/reference/security.mdx',
@@ -290,13 +307,14 @@ if (baseUrl) {
     '/docs/reference/security',
     '/docs/reference/troubleshooting',
     '/docs/reference/api-routes',
+    '/docs/reference/deployment',
     '/docs/runtime/end-to-end',
     '/docs/reference/faq',
   ]) {
     assert.ok(llmsIndex.includes(route), `llms.txt is missing ${route}`);
   }
   const llmsFull = await (await fetchEndpoint('/llms-full.txt', 'text/plain')).text();
-  for (const title of ['Start here', 'Run Aki', 'Chat and sessions', 'End-to-end example', 'Security and policy', 'Troubleshooting', 'FAQ']) {
+  for (const title of ['Start here', 'Run Aki', 'Chat and sessions', 'End-to-end example', 'Deployment strategy', 'Security and policy', 'Troubleshooting', 'FAQ']) {
     assert.ok(llmsFull.includes(`# ${title}`), `llms-full.txt is missing ${title}`);
   }
 
@@ -318,6 +336,13 @@ if (baseUrl) {
   assert.ok(
     glossarySearch.some((result) => result.url === '/docs/reference/glossary'),
     'local search did not return the glossary page',
+  );
+  const deploymentSearch = await (
+    await fetchEndpoint('/api/search?query=deployment%20strategy', 'application/json')
+  ).json();
+  assert.ok(
+    deploymentSearch.some((result) => result.url === '/docs/reference/deployment'),
+    'local search did not return the deployment strategy page',
   );
   const securitySearch = await (await fetchEndpoint('/api/search?query=security', 'application/json')).json();
   assert.ok(

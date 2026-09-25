@@ -71,6 +71,7 @@ curl -i 'http://localhost:3000/api/search?query=Rev'
 - `/docs/reference/api-routes` — Gateway, browser-proxy, and documentation route index.
 - `/docs/reference/security` — API-key and Store policy boundary.
 - `/docs/reference/troubleshooting` — symptom-first safe probes.
+- `/docs/reference/deployment` — immutable release identity, transactional promotion, gates, and rollback.
 - `/docs/reference/faq` — short answers linked to canonical pages.
 - `/docs/reference/glossary` — core runtime vocabulary.
 - `/docs/extending/create-a-capability` — create and invoke one capability.
