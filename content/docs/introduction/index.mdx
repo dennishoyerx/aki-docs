@@ -1,6 +1,6 @@
 ---
 title: Welcome to Aki
-description: A concise map of the Aki capability runtime and its public documentation.
+description: A practical map of the Aki capability runtime and its public documentation.
 ---
 
 Aki is a capability runtime. It turns a request into a deliberate action, resolves that action to a versioned capability, and invokes the implementation behind it.
@@ -13,7 +13,13 @@ request → Agent decides → Rev resolves → executor runs → result
                          Store supplies context-bound data
 ```
 
-The documentation is organized around that chain. Start with the [architecture map](/docs/architecture), then use the runtime and extending guides to connect the model to an implementation. The [reference section](/docs/reference) keeps route and capability details close at hand.
+## Start with a task
+
+- **Run the docs:** [Getting started](/docs/introduction/getting-started)
+- **Call a runtime:** [API first contact](/docs/reference/api-first-contact)
+- **Build one capability:** [Create and invoke a capability](/docs/extending/create-a-capability)
+
+For the request chain and ownership boundaries, read the [architecture map](/docs/architecture). The [glossary](/docs/reference/glossary) explains the names used throughout the site.
 
 ## The short version
 
@@ -23,11 +29,11 @@ The documentation is organized around that chain. Start with the [architecture m
 - **Store** provides context-bound data access with independent namespace policy.
 - **Executors** include native handlers, plugins or processes, graphs, HTTP calls, LLMs, and MCP integrations.
 
-A plugin can change how a capability runs without changing what the capability is. A browser `/api/...` prefix can be a proxy convention without becoming a kernel route. Those boundaries are the most useful things to keep in mind while reading the rest of the site.
+A plugin can change how a capability runs without changing what the capability is. A browser `/api/...` prefix can be a proxy convention without becoming a kernel route.
 
 ## Navigate by intent
 
-- **New to the project:** [Getting started](/docs/introduction/getting-started)
+- **New to the project:** [Start here](/docs/introduction/start-here)
 - **Need the ownership model:** [Agent and Rev](/docs/architecture/agent-rev)
 - **Building an integration:** [Plugins](/docs/extending/plugins)
 - **Calling the runtime:** [API routes](/docs/reference/api-routes)

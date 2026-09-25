@@ -1,6 +1,6 @@
 {
   "title": "Introduction",
-  "description": "Start with the runtime model and the documentation map.",
+  "description": "Start with a task, then learn the runtime model.",
   "defaultOpen": true,
-  "pages": ["index", "getting-started"]
+  "pages": ["start-here", "index", "getting-started"]
 }

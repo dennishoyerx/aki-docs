@@ -419,17 +419,26 @@ body {
 }
 
 .aki-command {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  overflow-x: auto;
+  margin: 0;
   border: 1px solid var(--aki-line);
   border-radius: 0.85rem;
-  padding: 1rem 1.2rem;
+  padding: 1.1rem 1.2rem;
   background: var(--aki-ink);
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.82rem;
+  line-height: 1.8;
+}
+
+.aki-quickstart__note {
+  margin: 0.9rem 0 0;
+  color: var(--color-fd-muted-foreground);
+  font-size: 0.9rem;
+}
+
+.aki-quickstart__note code {
+  color: var(--aki-red);
 }
 
 .aki-command span:last-child {

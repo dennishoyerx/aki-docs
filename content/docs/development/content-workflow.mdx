@@ -29,10 +29,10 @@ Run the checks below after editing content or routes:
 bun run typecheck
 bun run build
 PORT=3000 bun run start
-curl -i http://127.0.0.1:3000/llms.txt
-curl -i http://127.0.0.1:3000/llms-full.txt
-curl -i http://127.0.0.1:3000/docs/introduction.md
-curl -i 'http://127.0.0.1:3000/api/search?query=Rev'
+curl -i http://localhost:3000/llms.txt
+curl -i http://localhost:3000/llms-full.txt
+curl -i http://localhost:3000/docs/introduction.md
+curl -i 'http://localhost:3000/api/search?query=Rev'
 ```
 
 The local search route and MCP `search` tool must return a real matching page. The `list_pages` and `get_page` tools must use the same source and processed Markdown representation as the HTTP routes.

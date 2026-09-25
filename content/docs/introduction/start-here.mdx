@@ -1,0 +1,42 @@
+---
+title: Start here
+description: Choose a first path through the Aki capability runtime and its documentation.
+---
+
+Aki is an open capability runtime. In plain language, it turns a request into a deliberate action, finds the versioned capability that owns that action, and runs the implementation behind it.
+
+Use one of these three paths first:
+
+### Start the docs locally
+
+Run the documentation site on your machine, then use its local search and verification commands.
+
+[Open Getting started](/docs/introduction/getting-started)
+
+### Call the runtime API
+
+Discover a runtime with public health and tool endpoints, then make a safe first call.
+
+[Open API first contact](/docs/reference/api-first-contact)
+
+### Create and invoke a capability
+
+Describe a capability, let Rev own its identity and revision, and invoke it through the runtime.
+
+[Open Create and invoke a capability](/docs/extending/create-a-capability)
+
+## The request chain
+
+```text
+request → Agent decides → Rev resolves → executor runs → result
+                                      ↘ Ren presents kind=ui
+                         Store supplies context-bound data
+```
+
+The [architecture map](/docs/architecture) explains who owns each step. The [glossary](/docs/reference/glossary) defines the names used throughout the docs.
+
+## Next
+
+- [Getting started](/docs/introduction/getting-started) — run and verify the docs site.
+- [API first contact](/docs/reference/api-first-contact) — make a safe runtime discovery call.
+- [Create and invoke a capability](/docs/extending/create-a-capability) — follow one capability from creation to result.

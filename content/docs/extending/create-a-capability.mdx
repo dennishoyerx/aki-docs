@@ -1,0 +1,64 @@
+---
+title: Create and invoke a capability
+description: Follow one capability from Rev creation through an authorized invocation.
+---
+
+This is a runtime-specific walkthrough. The live schema is authoritative: start with `GET /tools`, then use the exposed `rev.create` and `rev.invoke` tools through an authorized Agent or tool surface. A deployment may restrict creation, builds, network access, or mutation.
+
+## 1. Discover the tools
+
+```sh
+export AKR_BASE_URL="https://aki-gateway.example.invalid"
+curl -i "$AKR_BASE_URL/tools"
+```
+
+Look for `rev.create` and `rev.invoke`. Their current input schemas are returned by `/tools`; the examples below show the stable shape, not a private deployment configuration.
+
+## 2. Create a Rev capability
+
+Send this payload to the `rev.create` tool. It describes a small Bun-backed tool that returns a greeting.
+
+```json
+{
+  "name": "hello.greet",
+  "description": "Greet a person by name",
+  "kind": "tool",
+  "executor": "bun-plugin",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" }
+    },
+    "required": ["name"]
+  },
+  "source": "export default async function handler(args: any) { return { greeting: 'Hello, ' + args.name }; }"
+}
+```
+
+Rev records the capability and its first revision, then the configured executor validates or builds it. A policy denial or build error is a normal failure; it is not a reason to create a second identity.
+
+## 3. Invoke it
+
+Once the capability is active, the public Kernel route accepts arguments under `args`:
+
+```sh
+curl -i -X POST \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: [REDACTED]' \
+  "$AKR_BASE_URL/rev/functions/hello.greet/invoke" \
+  -d '{"args":{"name":"Ada"}}'
+```
+
+A successful response has `ok: true`, the capability `name`, and a `result`. A failed resolution, requirement check, or executor call returns `ok: false` with an `error`; do not retry blindly or expose the key in logs.
+
+Browser clients may use the proxy spelling `/api/rev/functions/hello.greet/invoke`, which maps to the Kernel route without `/api`.
+
+## 4. Change it safely
+
+Use `rev.edit` or the Rev revision route to create a new revision, inspect it, and select it deliberately. Read [Rev](/docs/runtime/rev) for identity and selection, and [Guardrails](/docs/reference/guardrails) for the checks around invocation.
+
+## Next
+
+- [Rev](/docs/runtime/rev)
+- [Plugins](/docs/extending/plugins)
+- [API first contact](/docs/reference/api-first-contact)

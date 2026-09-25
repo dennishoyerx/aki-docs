@@ -2,7 +2,7 @@ import { createGetUrl } from 'fumadocs-core/source';
 
 export const appName = 'Aki';
 export const appDescription =
-  'A practical, open documentation home for the Aki capability runtime.';
+  'An open, task-oriented guide to the Aki capability runtime.';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';

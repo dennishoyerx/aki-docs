@@ -65,7 +65,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <code>{stack}</code>
         </pre>
       ) : null}
-      <a className="aki-button" href="/docs/introduction">
+      <a className="aki-button" href="/docs/introduction/start-here">
         Return to the docs
       </a>
     </main>

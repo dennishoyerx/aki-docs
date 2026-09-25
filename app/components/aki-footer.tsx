@@ -10,9 +10,9 @@ export function AkiFooter() {
       </div>
       <p>Clear boundaries for a capable runtime.</p>
       <nav className="aki-footer__links" aria-label="Footer navigation">
-        <Link to="/docs/introduction">Read the guides</Link>
-        <Link to="/docs/reference/api-routes">API reference</Link>
-        <Link to="/health">Service health</Link>
+        <Link to="/docs/introduction/start-here">Start here</Link>
+        <Link to="/docs/reference/api-first-contact">API first contact</Link>
+        <Link to="/health">Docs health</Link>
       </nav>
     </footer>
   );

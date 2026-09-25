@@ -1,6 +1,6 @@
 {
   "title": "Reference",
-  "description": "Routes, capability families, and safeguards.",
+  "description": "Routes, capability families, glossary, and safeguards.",
   "defaultOpen": true,
-  "pages": ["index", "api-routes", "capabilities", "guardrails"]
+  "pages": ["index", "api-first-contact", "api-routes", "capabilities", "glossary", "guardrails"]
 }

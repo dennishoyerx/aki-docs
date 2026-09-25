@@ -1,0 +1,24 @@
+---
+title: Glossary
+description: Plain-language definitions for the core Aki runtime terms.
+---
+
+These labels describe different boundaries in the same runtime. Use the plain-language column first, then the internal meaning when you are reading source or designing an integration.
+
+| Term | Plain language | Internal meaning | Tiny example |
+| --- | --- | --- | --- |
+| [Capability](/docs/reference/capabilities) | A named thing the runtime can do. | A stable Rev identity with a schema, kind, and revisions. | `hello.greet` accepts a name. |
+| [Tool](/docs/reference/capabilities) | A callable operation with a known input shape. | A schema-bearing surface exposed to an Agent or client; it may be native or plugin-backed. | `rev.invoke` takes `name` and `args`. |
+| [Rev](/docs/architecture/agent-rev) | The bookkeeper for what a capability is. | The layer that owns identity, revisions, active selection, resolution, and invocation. | Rev selects `hello.greet` revision `r1`. |
+| [Revision](/docs/runtime/rev) | A saved version of a capability. | A source-and-metadata version that Rev can activate, inspect, or roll back. | `r2` replaces `r1` without changing the capability name. |
+| [Executor](/docs/runtime/rev) | The runner that does the work. | The implementation selected behind a Rev identity, such as a Bun plugin, graph, HTTP call, LLM, or MCP tool. | A Bun handler receives `{ name: "Ada" }`. |
+| [Ren](/docs/extending/ren) | The presentation helper for UI capabilities. | A branch that derives presentation state from a Rev function with `kind=ui`; it is not a second registry. | Ren presents the props returned by a UI capability. |
+| [Store](/docs/runtime/store) | A guarded place for runtime data. | A context-bound data plane with namespace and read/write policy. | A capability reads a session setting through its inherited context. |
+| [Gateway](/docs/reference/api-routes) | The public HTTP entrance to the runtime. | The service that exposes discovery, chat, events, Rev, and related kernel routes. | A client calls `GET /tools`. |
+| [Kernel](/docs/architecture) | The runtime core behind the entrance. | The process that coordinates Agent decisions, Rev resolution, executors, and Store boundaries. | The gateway asks the kernel to resolve a capability. |
+| [Plugin](/docs/extending/plugins) | A separately loaded implementation. | A process-backed executor detail; it does not own capability identity or version history. | A Bun plugin implements `math.add`. |
+| [NATS](/docs/runtime/events) | A message bus for runtime work. | The transport used for dispatch, tool, and event messages between runtime components. | An event subject carries `event.chat.done.<session>`. |
+| [Session](/docs/runtime/chat) | A continuing conversation. | The context that groups messages and lets a client resume or stream a turn. | `GET /chat/stream/SESSION_ID` follows one session. |
+| [Event](/docs/runtime/events) | A recorded runtime occurrence. | A buffered or streamed message describing activity such as a tool step, UI change, or completion. | A consumer polls events or reads an SSE `data:` frame. |
+
+For the execution chain, see [Architecture](/docs/architecture). For route examples, see [API first contact](/docs/reference/api-first-contact).

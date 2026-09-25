@@ -1,6 +1,6 @@
 {
   "title": "Aki docs",
-  "description": "A practical map of the Aki capability runtime.",
+  "description": "A task-oriented map of the Aki capability runtime.",
   "pages": [
     "introduction",
     "architecture",

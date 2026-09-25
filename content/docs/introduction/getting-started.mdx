@@ -1,47 +1,54 @@
 ---
 title: Getting started
-description: Read the runtime in the right order and run the documentation site locally.
+description: Run the documentation site locally, then choose a runtime task.
 ---
 
-## Read the model first
+Aki docs is a small Fumadocs React Router site built with Vite, Bun, and TypeScript. The site documents Aki; it does not start the AKR runtime.
 
-A reliable first pass follows the ownership boundaries:
+## Start the docs locally
 
-1. Read [Architecture](/docs/architecture) for the execution chain.
-2. Read [Agent and Rev](/docs/architecture/agent-rev) for the decision and capability layers.
-3. Use [Runtime](/docs/runtime) for chat, events, and invocation surfaces.
-4. Read [Extending](/docs/extending) before adding a plugin or UI capability.
-5. Keep [Reference](/docs/reference) open while checking routes and safeguards.
-
-## Run this documentation site
-
-The site uses the React Router framework mode of Fumadocs, Vite, Bun, and TypeScript.
+Run this exact quickstart. Keep `bun run dev` running while you use the local site, and run the checks from another terminal when needed.
 
 ```bash
 bun install
 bun run dev
-```
-
-Open the local URL printed by the development server. The header search queries the local index built from the pages in `content/docs`; it does not call a hosted search service.
-
-Useful production-style checks are:
-
-```bash
 bun run typecheck
 bun run build
-bun run start
+bun run smoke
 ```
 
-## Use the machine-readable surfaces
+Open the URL printed by the development server. Search uses a local index built from `content/docs`; it does not call a hosted search service.
 
-The built site exposes a page index, the complete corpus, and processed Markdown for every page:
+For a production-style local check, build first, then run `PORT=3000 bun run start` in another terminal and request the docs site's health route:
 
-- `/llms.txt` — page index and descriptions.
-- `/llms-full.txt` — the complete seeded corpus.
-- `/docs/<page>.md` — processed Markdown for one page.
+```bash
+curl -i http://localhost:3000/health
+```
 
-The `/mcp` Streamable HTTP endpoint exposes `list_pages`, `get_page`, and `search`. Its tools use the same local source and search index as the site.
+That `/health` response belongs to `aki-docs`. It is not an AKR runtime health check, and the docs container does not start the runtime.
 
-## Keep the scope clear
+## Learn the request chain
 
-This site documents the public capability model. It does not add authentication, hosted search, an AI chat product, or a second capability registry. Deployment permissions and private service configuration remain operator concerns.
+Aki turns a request into a deliberate action and then resolves a versioned capability:
+
+```text
+request → Agent decides → Rev resolves → executor runs → result
+                                      ↘ Ren presents kind=ui
+                         Store supplies context-bound data
+```
+
+Read [Architecture](/docs/architecture) for ownership, then use [Runtime](/docs/runtime), [Extending](/docs/extending), and [Reference](/docs/reference) as needed. The [glossary](/docs/reference/glossary) is a compact vocabulary reference.
+
+## Choose your next task
+
+- [API first contact](/docs/reference/api-first-contact) — discover a runtime with safe examples.
+- [Create and invoke a capability](/docs/extending/create-a-capability) — follow one Rev capability from creation to result.
+- [Start here](/docs/introduction/start-here) — return to the three onboarding paths.
+
+The built site also exposes `/llms.txt`, `/llms-full.txt`, and processed Markdown at `/docs/<page>.md`. The `/mcp` endpoint uses the same local source and search index.
+
+## Next
+
+- [Start here](/docs/introduction/start-here)
+- [Architecture](/docs/architecture)
+- [API first contact](/docs/reference/api-first-contact)

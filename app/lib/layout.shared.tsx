@@ -13,18 +13,21 @@ export function baseOptions(): BaseLayoutProps {
           </span>
         </span>
       ),
-      url: '/docs/introduction',
+      url: '/docs/introduction/start-here',
       transparentMode: 'top',
       children: <span className="aki-nav-status">OSS runtime map</span>,
     },
     links: [
-      { text: 'Start here', url: '/docs/introduction', active: 'nested-url' },
+      { text: 'Start here', url: '/docs/introduction/start-here', active: 'nested-url' },
       {
         text: 'Architecture',
         url: '/docs/architecture',
         active: 'nested-url',
       },
+      { text: 'Runtime', url: '/docs/runtime', active: 'nested-url' },
+      { text: 'Extending', url: '/docs/extending', active: 'nested-url' },
       { text: 'Reference', url: '/docs/reference', active: 'nested-url' },
+      { text: 'Development', url: '/docs/development', active: 'nested-url' },
     ],
     themeSwitch: {
       enabled: true,

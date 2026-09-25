@@ -1,0 +1,54 @@
+---
+title: API first contact
+description: Make a safe first discovery and invocation request to an AKR Gateway.
+---
+
+These examples are runtime-specific. The placeholder below is not a deployment address; replace it with the Gateway address supplied by your operator. The documentation site has its own `/health` route and does not start the AKR runtime.
+
+## Discover the Gateway
+
+`/health` and `/tools` are the safest first checks. `/v1/models` is also public when the Gateway is available.
+
+```sh
+export AKR_BASE_URL="https://aki-gateway.example.invalid"
+curl -i "$AKR_BASE_URL/health"
+curl -i "$AKR_BASE_URL/tools"
+curl -i "$AKR_BASE_URL/v1/models"
+```
+
+If `AKR_API_KEY` is configured, protected routes need a key. The value below is deliberately non-secret and must be replaced locally; never commit a real key.
+
+```sh
+curl -i \
+  -H 'x-api-key: [REDACTED]' \
+  "$AKR_BASE_URL/rev/functions"
+```
+
+The current Gateway middleware exempts `/health`, `/tools`, and `/v1/models` from the API-key check. Other routes depend on the operator's configuration.
+
+## Browser path or kernel path?
+
+`/api/...` is a browser proxy convention. The proxy strips `/api` before forwarding to the Kernel; it is not another Kernel route.
+
+| Browser path | Kernel path |
+| --- | --- |
+| `/api/rev/functions` | `/rev/functions` |
+| `/api/v1/chat/completions` | `/v1/chat/completions` |
+| `/api/chat/sessions` | `/chat/sessions` |
+
+## Accepted, streamed, completed, or failed
+
+A runtime call has more than one useful outcome:
+
+- **`202 Accepted`** — `POST /chat/dispatch` has published the turn and returns a body like `{"ok":true,"status":"accepted"}`. It means work was queued, not that the answer is finished.
+- **SSE** — a streaming route such as `GET /chat/stream/{sessionId}` or `GET /events/stream` keeps the connection open and sends `data:` frames. An OpenAI-compatible stream ends with `[DONE]`.
+- **Completed** — a non-streaming HTTP response has arrived, or a stream has delivered its terminal `done` event/`[DONE]`. Do not treat `accepted` as completion.
+- **Error** — a non-2xx response or an error frame reports a failed request. Read the returned `error` message, fix the request or policy, and do not log credentials.
+
+For a complete route index, see [API routes](/docs/reference/api-routes). To continue with a capability, see [Create and invoke a capability](/docs/extending/create-a-capability).
+
+## Next
+
+- [Create and invoke a capability](/docs/extending/create-a-capability)
+- [Rev](/docs/runtime/rev)
+- [Guardrails](/docs/reference/guardrails)

@@ -15,17 +15,19 @@ request → Agent decides → Rev resolves → executor runs → result
 ```bash
 bun install
 bun run dev
+bun run typecheck
+bun run build
+bun run smoke
 ```
 
-Then open the URL printed by the React Router development server. The search dialog and the `/api/search` route use a local Fumadocs full-text index built from `content/docs`.
+Open the URL printed by the React Router development server. The search dialog and the `/api/search` route use a local Fumadocs full-text index built from `content/docs`. The docs service's `/health` route does not start the AKR runtime.
 
 ## Verify
 
+Run the linter alongside the quickstart checks:
+
 ```bash
-bun run typecheck
 bun run lint
-bun run build
-bun run smoke
 ```
 
 To exercise the production server:
@@ -34,32 +36,43 @@ To exercise the production server:
 PORT=3000 bun run start
 ```
 
+In another terminal, run the full public-surface smoke check:
+
+```bash
+BASE_URL=http://localhost:3000 bun run smoke
+```
+
 Useful checks:
 
 ```bash
-curl -i http://127.0.0.1:3000/
-curl -i http://127.0.0.1:3000/health
-curl -i http://127.0.0.1:3000/llms.txt
-curl -i http://127.0.0.1:3000/llms-full.txt
-curl -i http://127.0.0.1:3000/docs/introduction.md
-curl -i 'http://127.0.0.1:3000/api/search?query=Rev'
+curl -i http://localhost:3000/
+curl -i http://localhost:3000/health
+curl -i http://localhost:3000/llms.txt
+curl -i http://localhost:3000/llms-full.txt
+curl -i http://localhost:3000/docs/introduction.md
+curl -i 'http://localhost:3000/api/search?query=Rev'
 ```
 
 ## Public routes
 
-- `/docs/*` — HTML documentation with the six sidebar groups: Introduction, Architecture, Runtime, Extending, Reference, and Development.
+- `/docs/introduction/start-here` — the three onboarding paths.
+- `/docs/introduction/getting-started` — local quickstart and next steps.
+- `/docs/reference/api-first-contact` — safe runtime discovery and response semantics.
+- `/docs/reference/glossary` — core runtime vocabulary.
+- `/docs/extending/create-a-capability` — create and invoke one capability.
+- `/docs/*` — HTML documentation with the six sidebar groups: Introduction, Architecture, Runtime, Extending, Reference, and Development. Start here is the first page in Introduction.
 - `/llms.txt` — page index.
 - `/llms-full.txt` — complete processed corpus.
 - `/docs/<page>.md` — processed Markdown for one page.
 - `/api/search?query=...` — local full-text search.
 - `/mcp` — Streamable HTTP MCP endpoint.
-- `/health` — successful service health response.
+- `/health` — successful docs service health response.
 
 The MCP server exposes `list_pages`, `get_page`, and `search`. The source and search helpers are shared with the HTTP routes, so an MCP result points at the same pages and local index as the browser.
 
 ## Docker
 
-The image uses Bun only for the build stage and runs the production server on Node. The Compose service and container are named `aki-docs`, join the existing external `public` network, and expose Traefik's `web` entrypoint through the `docs.hzbx.de` host rule. The Compose file intentionally publishes no host ports and configures no TLS label.
+The image uses Bun only for the build stage and runs the production server on Node. The Compose service and container are named `aki-docs`, join the existing external `public` network, and expose Traefik's `web` entrypoint through the configured host rule. The Compose file intentionally publishes no host ports and configures no TLS label.
 
 ```bash
 docker compose up --build

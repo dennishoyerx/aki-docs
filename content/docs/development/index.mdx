@@ -28,11 +28,13 @@ PORT=3000 bun run start
 
 The server exposes the documentation UI plus:
 
-- `/health` for a small successful health response;
+- `/health` for the docs service health response;
 - `/api/search?query=Rev` for the local full-text index;
 - `/llms.txt` and `/llms-full.txt` for machine-readable corpus views;
 - `/docs/<page>.md` for processed page Markdown;
 - `/mcp` for the Streamable HTTP MCP endpoint.
+
+The onboarding pages are part of the same source: `/docs/introduction/start-here`, `/docs/reference/api-first-contact`, and `/docs/reference/glossary`.
 
 ## Keep changes focused
 
